@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cord.WebShare.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Cord.Protocol/Cord.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/index.html" LogicalName="Cord.WebShare.Assets.index.html" />
+    <EmbeddedResource Include="Assets/admin.html" LogicalName="Cord.WebShare.Assets.admin.html" />
+    <EmbeddedResource Include="../Cord.App/Assets/Images/logo-128.png" LogicalName="Cord.WebShare.Assets.logo.png" />
+  </ItemGroup>
+
+</Project>

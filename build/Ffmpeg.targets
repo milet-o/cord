@@ -1,0 +1,119 @@
+<Project>
+  <!--
+    Downloads a pinned LGPL shared build of FFmpeg 9 (BtbN/FFmpeg-Builds) once per machine and
+    copies its libraries next to the build and publish output. Set CordBundleFfmpeg=false to
+    use a system FFmpeg instead (see docs/dependencies.md).
+  -->
+  <PropertyGroup>
+    <CordBundleFfmpeg Condition="'$(CordBundleFfmpeg)' == ''">true</CordBundleFfmpeg>
+    <CordFfmpegRelease>autobuild-2026-11-23-12-43</CordFfmpegRelease>
+    <CordFfmpegBuild>ffmpeg-n9.0.2-62-gac1c6e003f</CordFfmpegBuild>
+
+    <CordFfmpegPlatform Condition="$(RuntimeIdentifier.StartsWith('win-x64'))">win64</CordFfmpegPlatform>
+    <CordFfmpegPlatform Condition="$(RuntimeIdentifier.StartsWith('linux-x64'))">linux64</CordFfmpegPlatform>
+    <CordFfmpegPlatform Condition="'$(CordFfmpegPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win64</CordFfmpegPlatform>
+    <CordFfmpegPlatform Condition="'$(CordFfmpegPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">linux64</CordFfmpegPlatform>
+
+    <CordFfmpegExtension Condition="'$(CordFfmpegPlatform)' == 'win64'">zip</CordFfmpegExtension>
+    <CordFfmpegExtension Condition="'$(CordFfmpegPlatform)' == 'linux64'">tar.xz</CordFfmpegExtension>
+    <CordFfmpegSha256 Condition="'$(CordFfmpegPlatform)' == 'win64'">a5627bcde93a2cfbc603d6348bc6cf27945589e8ce03735bda157070988f430c</CordFfmpegSha256>
+    <CordFfmpegSha256 Condition="'$(CordFfmpegPlatform)' == 'linux64'">1210875a6e6b9365368c9b955cca43ae12472b2d0f74be8e323cab4efe5eb3ca</CordFfmpegSha256>
+
+    <CordFfmpegName>$(CordFfmpegBuild)-$(CordFfmpegPlatform)-lgpl-shared-9.0</CordFfmpegName>
+    <CordFfmpegUrl>https://github.com/BtbN/FFmpeg-Builds/releases/download/$(CordFfmpegRelease)/$(CordFfmpegName).$(CordFfmpegExtension)</CordFfmpegUrl>
+    <CordFfmpegCache>$([System.IO.Path]::Combine($([System.Environment]::GetFolderPath(SpecialFolder.LocalApplicationData)), 'Cord', 'build-cache'))</CordFfmpegCache>
+    <CordFfmpegRoot>$(CordFfmpegCache)/$(CordFfmpegName)</CordFfmpegRoot>
+    <CordFfmpegLibraries Condition="'$(CordFfmpegPlatform)' == 'win64'">$(CordFfmpegRoot)/bin/*.dll</CordFfmpegLibraries>
+    <CordFfmpegLibraries Condition="'$(CordFfmpegPlatform)' == 'linux64'">$(CordFfmpegRoot)/lib/*.so*</CordFfmpegLibraries>
+  </PropertyGroup>
+
+  <UsingTask TaskName="CordFetchArchive" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Url ParameterType="System.String" Required="true" />
+      <Sha256 ParameterType="System.String" Required="true" />
+      <CacheDirectory ParameterType="System.String" Required="true" />
+      <Name ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Diagnostics" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.IO.Compression" />
+      <Using Namespace="System.Net.Http" />
+      <Using Namespace="System.Security.Cryptography" />
+      <Using Namespace="System.Threading" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var root = Path.Combine(CacheDirectory, Name);
+        var marker = Path.Combine(root, ".complete");
+        Directory.CreateDirectory(CacheDirectory);
+
+        // Parallel builds of several projects share the cache; only one may fill it.
+        using (var mutex = new Mutex(false, "CordFfmpegFetch"))
+        {
+            try { mutex.WaitOne(); } catch (AbandonedMutexException) { }
+            try
+            {
+                if (!File.Exists(marker))
+                {
+                    var archive = Path.Combine(CacheDirectory, Name + (Url.EndsWith(".zip") ? ".zip" : ".tar.xz"));
+                    Log.LogMessage(MessageImportance.High, "Downloading FFmpeg from " + Url);
+                    using (var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) })
+                    using (var response = http.GetAsync(Url, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult())
+                    {
+                        response.EnsureSuccessStatusCode();
+                        using (var output = File.Create(archive))
+                            response.Content.CopyToAsync(output).GetAwaiter().GetResult();
+                    }
+
+                    string hash;
+                    using (var stream = File.OpenRead(archive))
+                    using (var sha = SHA256.Create())
+                        hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+                    if (hash != Sha256.ToLowerInvariant())
+                    {
+                        File.Delete(archive);
+                        Log.LogError("FFmpeg archive hash mismatch: " + hash + ". Build with -p:CordBundleFfmpeg=false to use a system FFmpeg.");
+                        return false;
+                    }
+
+                    if (Directory.Exists(root))
+                        Directory.Delete(root, true);
+                    if (archive.EndsWith(".zip"))
+                    {
+                        ZipFile.ExtractToDirectory(archive, CacheDirectory);
+                    }
+                    else
+                    {
+                        var tar = Process.Start(new ProcessStartInfo("tar", "-xJf \"" + archive + "\" -C \"" + CacheDirectory + "\"") { UseShellExecute = false });
+                        tar.WaitForExit();
+                        if (tar.ExitCode != 0)
+                        {
+                            Log.LogError("Extracting the FFmpeg archive failed (tar exit code " + tar.ExitCode + ").");
+                            return false;
+                        }
+                    }
+
+                    File.Delete(archive);
+                    File.WriteAllText(marker, Url);
+                }
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="CordFetchFfmpeg"
+          BeforeTargets="AssignTargetPaths"
+          Condition="'$(CordBundleFfmpeg)' == 'true' and '$(CordFfmpegPlatform)' != ''">
+    <CordFetchArchive Url="$(CordFfmpegUrl)" Sha256="$(CordFfmpegSha256)" CacheDirectory="$(CordFfmpegCache)" Name="$(CordFfmpegName)" />
+
+    <ItemGroup>
+      <_CordFfmpegFile Include="$(CordFfmpegLibraries)" />
+      <None Include="@(_CordFfmpegFile)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+      <None Include="$(CordFfmpegRoot)/LICENSE.txt" Link="ffmpeg-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" Condition="Exists('$(CordFfmpegRoot)/LICENSE.txt')" />
+    </ItemGroup>
+  </Target>
+</Project>

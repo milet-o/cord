@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Cord</AssemblyName>
+    <RootNamespace>Cord.App</RootNamespace>
+    <ApplicationIcon>Assets/Icons/cord.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cord.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="Hexa.NET.ImGui.Backends" />
+    <PackageReference Include="Hexa.NET.ImGui.Backends.SDL3" />
+    <PackageReference Include="Hexa.NET.SDL3" />
+    <PackageReference Include="Vortice.Direct3D11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Cord.Core/Cord.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/Fonts/*.ttf" LogicalName="Cord.App.Assets.Fonts.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets/Icons/*.png" LogicalName="Cord.App.Assets.Icons.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets/Images/*.png" LogicalName="Cord.App.Assets.Images.%(Filename)%(Extension)" />
+    <None Include="Assets/Fonts/*-LICENSE.txt" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Import Project="../../build/Ffmpeg.targets" />
+
+</Project>

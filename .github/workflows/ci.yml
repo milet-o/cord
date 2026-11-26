@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore Cord.slnx
+      - name: Build
+        run: dotnet build Cord.slnx --no-restore -c Release
+      - name: Test
+        run: dotnet test Cord.slnx --no-build -c Release
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore Cord.slnx -p:CordBundleFfmpeg=false
+      - name: Build
+        run: dotnet build Cord.slnx --no-restore -c Release -p:CordBundleFfmpeg=false
+      - name: Test (non-FFmpeg suites)
+        run: dotnet test Cord.slnx --no-build -c Release -p:CordBundleFfmpeg=false --filter "FullyQualifiedName!~Cord.Media.Tests"

@@ -1,0 +1,15 @@
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+*.DotSettings.user
+publish/
+release/
+*.nupkg
+*.zip
+*.bmp

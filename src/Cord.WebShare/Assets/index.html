@@ -1,0 +1,3606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Cord — Remote Play</title>
+  <link id="faviconLink" rel="icon" type="image/png" />
+  <style>
+    :root {
+      --bg: #0F1114;
+      --bg-top: #14171C;
+      --surface: #171A1F;
+      --surface-hover: #1F232A;
+      --surface-raised: #232730;
+      --input-bg: #111318;
+      --border: #2A2F3A;
+      --border-strong: #3A4150;
+      --text: #F2F3F5;
+      --muted: #969DA9;
+      --faint: #636A76;
+      --accent: #1B64F2;
+      --accent-hover: #3376F6;
+      --accent-active: #1552CC;
+      --accent-soft: rgba(27, 100, 242, 0.14);
+      --accent-text: #5B92FF;
+      --on-accent: #FFFFFF;
+      --success: #28B872;
+      --warning: #E09F1F;
+      --danger: #E04848;
+      --mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color-scheme: dark;
+    }
+    [data-theme="light"] {
+      --bg: #E8E6E1;
+      --bg-top: #DFDDD7;
+      --surface: #F4F3EF;
+      --surface-hover: #EAE8E2;
+      --surface-raised: #E1DFD9;
+      --input-bg: #FFFFFF;
+      --border: #CECBC3;
+      --border-strong: #B5B1A7;
+      --text: #15171A;
+      --muted: #555A64;
+      --faint: #7E828C;
+      --accent: #1456D8;
+      --accent-hover: #1E63EA;
+      --accent-active: #0F44B0;
+      --accent-soft: rgba(20, 86, 216, 0.11);
+      --accent-text: #1456D8;
+      --on-accent: #FFFFFF;
+      --success: #15804A;
+      --warning: #B4690E;
+      --danger: #C82E2E;
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    ::selection { background: var(--accent); color: var(--on-accent); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      caret-color: var(--accent);
+    }
+
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .topbar {
+      height: 58px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 0 24px;
+      background: var(--bg-top);
+    }
+    .topbar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 700; letter-spacing: -0.02em;
+    }
+    .topbar-brand img { width: 28px; height: 28px; display: block; border-radius: 6px; }
+    .version-pill {
+      font-family: var(--mono);
+      font-size: 11px; font-weight: 600;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 6px;
+      letter-spacing: 0.01em;
+    }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+    .theme-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      border-radius: 7px; padding: 6px 10px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    }
+    .theme-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-strong); }
+    .player-chip {
+      display: none; align-items: center; gap: 7px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; padding: 6px 11px;
+      font-size: 12.5px; color: var(--muted); cursor: pointer;
+    }
+    .player-chip:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-strong); }
+    .player-chip strong { color: var(--text); }
+
+    .gate-wrap {
+      display: flex; align-items: center; justify-content: center;
+      min-height: calc(100vh - 58px); padding: 24px;
+    }
+    .gate-card {
+      width: 100%; max-width: 420px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 26px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+    }
+    .gate-card h1 { margin: 0 0 6px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+    .gate-sub { margin: 0 0 18px 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 11px 13px; border-radius: 7px;
+      background: var(--input-bg); color: var(--text);
+      border: 1px solid var(--border); font-size: 14.5px; outline: none;
+      margin-bottom: 12px;
+    }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); }
+
+    .wait-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px; border-radius: 8px;
+      background: var(--surface-raised); border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .launcher {
+      display: none; max-width: 1060px; margin: 0 auto;
+      padding: 26px 24px 44px 24px;
+    }
+    .page-title { margin: 0 0 4px 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; }
+    .page-sub { margin: 0 0 22px 0; font-size: 14.5px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: 380px 1fr; gap: 18px; align-items: start; }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .topbar { padding: 0 16px; }
+      .launcher { padding: 18px 16px 32px 16px; }
+    }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px;
+    }
+    .console-hero {
+      height: 144px; border-radius: 8px; background: var(--surface-raised);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px; position: relative;
+    }
+    .hero-rings {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); transition: color 0.15s ease;
+    }
+    .hero-rings.ready { color: var(--text); }
+    .hero-rings.standby { color: var(--warning); }
+    .hero-rings.busy { color: var(--accent-text); }
+    .hero-rings.offline { color: var(--faint); }
+    .console-name { margin: 0 0 6px 0; font-size: 20px; font-weight: 700; letter-spacing: -0.015em; }
+    .status-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13.5px; font-weight: 600; margin-bottom: 14px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
+    .dot.ready { background: var(--success); }
+    .dot.standby { background: var(--warning); }
+    .dot.busy { background: var(--accent); }
+    .dot.offline { background: var(--danger); }
+    .status-row.ready { color: var(--success); }
+    .status-row.standby { color: var(--warning); }
+    .status-row.busy { color: var(--accent-text); }
+    .status-row.offline { color: var(--faint); }
+
+    .cooldown-box {
+      display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px;
+      background: var(--surface-raised); border: 1px solid var(--warning);
+      font-size: 12.5px; line-height: 1.45; color: var(--warning);
+    }
+    .cooldown-box.ready { border-color: var(--success); color: var(--success); }
+    .cooldown-bar-track {
+      margin-top: 7px; height: 3px; border-radius: 999px;
+      background: var(--border); overflow: hidden;
+    }
+    .cooldown-bar-fill { height: 100%; width: 0%; background: var(--warning); transition: width 0.2s linear; }
+
+    label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    select {
+      width: 100%; padding: 10px 11px; border-radius: 7px;
+      background: var(--input-bg); color: var(--text);
+      border: 1px solid var(--border); font-size: 13.5px;
+      margin-bottom: 12px; outline: none; font-family: inherit;
+    }
+    select:focus { border-color: var(--accent); }
+    .custom-panel {
+      display: none; margin-bottom: 12px; padding: 12px; border-radius: 8px;
+      background: var(--surface-raised); border: 1px solid var(--border);
+    }
+    .custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .custom-grid select { margin-bottom: 8px; background: var(--input-bg); }
+    .range-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12.5px; color: var(--muted); margin: 4px 0 6px 0;
+    }
+    .range-row strong { color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+
+    button {
+      border: 1px solid transparent; border-radius: 7px; padding: 10px 14px;
+      font-size: 13.5px; font-weight: 600; cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+      font-family: inherit;
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary {
+      width: 100%; background: var(--accent); border-color: var(--accent-active);
+      color: var(--on-accent); font-size: 14.5px; padding: 11px 16px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-primary:active:not(:disabled) { background: var(--accent-active); }
+    .btn-secondary { background: var(--surface-raised); border-color: var(--border); color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
+    .btn-cancel {
+      width: 100%; margin-top: 8px;
+      background: var(--surface-raised); border-color: var(--border); color: var(--muted);
+      padding: 9px 12px; font-size: 13px; display: none;
+    }
+    .btn-cancel:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+    .btn-ghost {
+      background: transparent; border-color: var(--border); color: var(--muted);
+      padding: 5px 10px; font-size: 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); border-color: var(--border-strong); }
+    .btn-ghost.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+    .btn-accent-soft {
+      background: var(--accent-soft); border-color: rgba(27, 100, 242, 0.35); color: var(--accent-text);
+      padding: 5px 10px; font-size: 12px; border-radius: 6px;
+    }
+    .btn-accent-soft:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
+    .btn-danger {
+      background: rgba(224, 72, 72, 0.12); border-color: rgba(224, 72, 72, 0.4); color: var(--danger);
+      padding: 6px 11px; font-size: 12.5px;
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(224, 72, 72, 0.22); }
+
+    .spinner {
+      width: 15px; height: 15px; border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      border-top-color: currentColor;
+      animation: cord-spin 0.75s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes cord-spin { to { transform: rotate(360deg); } }
+
+    .right-stack { display: flex; flex-direction: column; gap: 16px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .card-title { font-size: 13.5px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+    .muted-note { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+    .member-list { display: flex; flex-direction: column; gap: 8px; }
+    .member-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 10px; border-radius: 7px;
+      background: var(--surface-raised); border: 1px solid var(--border);
+    }
+    .member-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .avatar {
+      width: 26px; height: 26px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11.5px; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .avatar.controlling { box-shadow: 0 0 0 2px var(--accent); }
+    .member-meta { min-width: 0; }
+    .member-name {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .member-role { font-size: 11.5px; color: var(--faint); }
+    .member-role.playing { color: var(--accent-text); font-weight: 600; }
+
+    .live-pill { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font-size: 12px; font-weight: 700; }
+    .live-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+    .net-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .net-stat {
+      padding: 10px 12px; border-radius: 7px;
+      background: var(--surface-raised); border: 1px solid var(--border);
+    }
+    .net-stat-label { font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+    .net-stat-value {
+      font-size: 14.5px; font-weight: 700; color: var(--text);
+      font-family: var(--mono); font-variant-numeric: tabular-nums;
+    }
+    .net-rec { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+    .net-rec strong { color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .kbd-grid { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); }
+    .kbd-item { display: inline-flex; align-items: center; gap: 5px; }
+    kbd {
+      display: inline-block; padding: 1px 6px; border-radius: 4px;
+      background: var(--surface-raised); border: 1px solid var(--border-strong);
+      color: var(--text); font-family: var(--mono); font-size: 11px; font-weight: 600;
+    }
+
+    .error-box {
+      margin-top: 12px; padding: 10px 12px; border-radius: 7px;
+      background: rgba(224, 72, 72, 0.11); border: 1px solid rgba(224, 72, 72, 0.45);
+      color: var(--danger); font-size: 12.5px; line-height: 1.45; display: none;
+    }
+
+    /* Stream View stays dark obsidian over game video regardless of launcher theme */
+    .stream-view {
+      position: fixed; inset: 0; background: #000;
+      display: none; align-items: center; justify-content: center;
+      color: #F2F3F5;
+    }
+    .stream-view.active { display: flex; }
+    canvas {
+      max-width: 100%; max-height: 100%;
+      width: 100%; height: 100%; object-fit: contain; background: #000;
+    }
+
+    .corner-stats {
+      position: fixed; top: 10px; left: 10px; z-index: 25;
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(15, 17, 20, 0.84);
+      border: 1px solid #2A2F3A;
+      border-radius: 6px; padding: 5px 10px;
+      font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: #969DA9;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none; user-select: none;
+    }
+    .corner-stats strong { color: #F2F3F5; }
+    .corner-role { font-family: "Inter", sans-serif; color: #5B92FF; font-weight: 700; }
+    .corner-role.spectator { color: #969DA9; font-weight: 600; }
+    .ms-dot { width: 7px; height: 7px; border-radius: 50%; background: #28B872; }
+    .ms-dot.mid { background: #E09F1F; }
+    .ms-dot.high { background: #E04848; }
+
+    .party-overlay {
+      position: fixed; top: 10px; right: 10px; z-index: 25;
+      width: 232px;
+      background: rgba(15, 17, 20, 0.88);
+      border: 1px solid #2A2F3A;
+      border-radius: 8px; padding: 10px;
+      user-select: none;
+    }
+    .party-overlay.collapsed { width: auto; padding: 6px 10px; }
+    .party-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 700; color: #969DA9; letter-spacing: 0.04em; }
+    .party-toggle { background: transparent; border: 0; color: #969DA9; padding: 2px 6px; font-size: 12px; border-radius: 5px; }
+    .party-toggle:hover { background: #232730; color: #F2F3F5; }
+    .party-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+    .party-overlay.collapsed .party-list { display: none; }
+    .party-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 7px; border-radius: 6px; background: #171A1F; border: 1px solid #242934; }
+    .party-row .avatar { width: 22px; height: 22px; font-size: 10px; }
+    .party-row .member-name { font-size: 12px; color: #F2F3F5; }
+    .party-row .member-role { font-size: 10.5px; color: #969DA9; }
+    .party-row .member-role.playing { color: #5B92FF; }
+
+    .hud {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 92vw;
+      background: rgba(15, 17, 20, 0.90);
+      border: 1px solid #2A2F3A;
+      border-radius: 8px; padding: 6px 9px;
+      z-index: 26; transition: opacity 0.2s ease;
+    }
+    .hud.hidden { opacity: 0; pointer-events: none; }
+    .hud .btn-ghost { border-color: #2A2F3A; color: #A8B0BC; }
+    .hud .btn-ghost:hover:not(:disabled) { background: #232730; color: #F2F3F5; border-color: #3A4150; }
+    .hud .btn-ghost.active { background: rgba(27, 100, 242, 0.2); border-color: #1B64F2; color: #7AA8FF; }
+    .vol-wrap { display: inline-flex; align-items: center; gap: 6px; }
+    .vol-slider { width: 68px !important; }
+    .hud-banner {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      background: rgba(15, 17, 20, 0.94); border: 1px solid #1B64F2;
+      border-radius: 8px; padding: 10px 16px; font-size: 13px; color: #F2F3F5;
+      z-index: 26; display: none; align-items: center; gap: 10px;
+    }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 40;
+      background: rgba(0, 0, 0, 0.65);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      width: 100%; max-width: 380px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .modal-box h3 { margin: 0 0 8px 0; font-size: 17px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+    .check-row {
+      display: flex; align-items: center; gap: 8px; margin-top: 10px;
+      cursor: pointer; font-size: 12.5px; font-weight: 500; color: var(--text);
+    }
+    .check-row input { width: auto; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+    .boost-presets { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 10px 0; }
+    .boost-presets .btn-ghost { padding: 5px 9px; font-size: 12px; }
+    .boost-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+    @media (max-width: 600px) { .boost-sliders { grid-template-columns: 1fr; } }
+    .boost-slider-item label { margin-bottom: 2px; font-size: 12px; display: flex; justify-content: space-between; }
+    .boost-slider-item label strong { color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .boost-popover {
+      position: fixed; top: 56px; left: 50%; transform: translateX(-50%);
+      width: min(390px, 92vw); z-index: 28;
+      background: #14171C; color: #F2F3F5;
+      border: 1px solid #2A2F3A; border-radius: 10px; padding: 14px 16px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+      display: none;
+    }
+    .boost-popover.open { display: block; }
+    .boost-popover label { color: #969DA9; }
+    .boost-popover .boost-slider-item label strong { color: #F2F3F5; }
+    .boost-popover .btn-ghost { border-color: #2A2F3A; color: #969DA9; }
+    .boost-popover .btn-ghost:hover:not(:disabled) { background: #232730; color: #F2F3F5; }
+    .boost-popover .btn-ghost.active { background: rgba(27, 100, 242, 0.2); border-color: #1B64F2; color: #7AA8FF; }
+    .boost-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .boost-pop-head h4 { margin: 0; font-size: 13.5px; font-weight: 700; }
+    .boost-pop-note { margin-top: 8px; font-size: 11.5px; color: #636A76; }
+    .corner-adaptive { color: #28B872; font-weight: 700; }
+    .corner-adaptive.throttled { color: #E09F1F; }
+    .corner-boost { color: #5B92FF; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img id="brandLogo" alt="Cord" />
+      <span>Cord</span>
+      <span class="version-pill">{{CORD_VERSION}}</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="themeToggleBtn" class="theme-btn" type="button" title="Alternar tema Obsidian Escuro / PS1 Claro">
+        <span id="themeToggleLabel">PS1 Claro</span>
+      </button>
+      <button id="playerChip" class="player-chip" type="button" title="Alterar nome">
+        <span>Jogando como</span>
+        <strong id="playerChipName">Jogador</strong>
+      </button>
+    </div>
+  </header>
+
+  <main id="nameGate" class="gate-wrap">
+    <section class="gate-card">
+      <h1>Quem vai jogar?</h1>
+      <p class="gate-sub">Digite seu nome para pedir acesso ao console. O dono do PS5 aprova quem entra na sala e vocês podem passar o controle entre si.</p>
+      <form id="nameForm">
+        <label for="nameInput">Seu nome</label>
+        <input id="nameInput" type="text" maxlength="24" placeholder="Seu nome ou apelido" autocomplete="nickname" required />
+        <div id="dailyPassField" style="display:none;">
+          <label for="dailyPassInput">Senha do dia</label>
+          <input id="dailyPassInput" type="text" maxlength="12" placeholder="Código de 6 caracteres" autocomplete="off" style="text-transform:uppercase;letter-spacing:0.12em;font-family:var(--mono);" />
+        </div>
+        <button id="joinBtn" class="btn-primary" type="submit">Entrar na sala</button>
+      </form>
+      <div id="gateError" class="error-box"></div>
+    </section>
+  </main>
+
+  <main id="waitingGate" class="gate-wrap" style="display:none;">
+    <section class="gate-card">
+      <h1>Aguardando aprovação</h1>
+      <p class="gate-sub">Sua solicitação foi enviada ao dono do PS5 junto com sua identificação de rede. Assim que ele aprovar, a sala abre automaticamente.</p>
+      <div class="wait-row">
+        <span class="spinner"></span>
+        <div>
+          <div style="font-weight:700;font-size:14px;" id="waitingPlayerName">Jogador</div>
+          <div class="muted-note">Mantendo conexão aberta...</div>
+        </div>
+      </div>
+      <button id="cancelWaitBtn" class="btn-secondary" style="width:100%;" type="button">Voltar</button>
+    </section>
+  </main>
+
+  <main id="launcher" class="launcher">
+    <h1 class="page-title">Console compartilhado</h1>
+    <p class="page-sub">Conecte ao PS5, ajuste a qualidade da transmissão e gerencie quem está com o controle.</p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="console-hero">
+          <div id="heroRings" class="hero-rings">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="6" y1="11" x2="10" y2="11"></line>
+              <line x1="8" y1="9" x2="8" y2="13"></line>
+              <line x1="15" y1="12" x2="15.01" y2="12"></line>
+              <line x1="18" y1="10" x2="18.01" y2="10"></line>
+              <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <h2 id="consoleName" class="console-name">PlayStation 5</h2>
+        <div id="statusRow" class="status-row">
+          <span id="statusDot" class="dot"></span>
+          <span id="statusText">Conectando ao host...</span>
+        </div>
+
+        <div id="cooldownBox" class="cooldown-box">
+          <div id="cooldownText"></div>
+          <div class="cooldown-bar-track"><div id="cooldownFill" class="cooldown-bar-fill"></div></div>
+        </div>
+
+        <label for="qualitySelect">Qualidade do stream (H.264)</label>
+        <select id="qualitySelect">
+          <option value="1920x1080@60:50000:adaptive">Adaptativo · 1080p 60 fps (até 50 Mbps)</option>
+          <option value="1920x1080@60:80000:adaptive">Adaptativo · 1080p 60 fps (até 80 Mbps)</option>
+          <option value="1280x720@60:30000:adaptive">Adaptativo · 720p 60 fps (até 30 Mbps)</option>
+          <option value="1280x720@30:4000">720p · 30 fps · 4 Mbps (internet limitada)</option>
+          <option value="1280x720@60:8000">720p · 60 fps · 8 Mbps (leve)</option>
+          <option value="1280x720@60:15000">720p · 60 fps · 15 Mbps (720p nítido)</option>
+          <option value="1280x720@60:30000">720p · 60 fps · 30 Mbps (720p alta taxa)</option>
+          <option value="1280x720@60:50000">720p · 60 fps · 50 Mbps (720p máximo)</option>
+          <option value="1920x1080@60:12000" selected>1080p · 60 fps · 12 Mbps (equilibrado)</option>
+          <option value="1920x1080@60:20000">1080p · 60 fps · 20 Mbps (alta qualidade)</option>
+          <option value="1920x1080@60:35000">1080p · 60 fps · 35 Mbps (fibra rápida)</option>
+          <option value="1920x1080@60:50000">1080p · 60 fps · 50 Mbps (ultra)</option>
+          <option value="1920x1080@60:80000">1080p · 60 fps · 80 Mbps (extremo)</option>
+          <option value="custom">Personalizado...</option>
+        </select>
+
+        <div id="customPanel" class="custom-panel">
+          <div class="custom-grid">
+            <div>
+              <label for="customRes">Resolução</label>
+              <select id="customRes">
+                <option value="640x360">360p</option>
+                <option value="960x540">540p</option>
+                <option value="1280x720">720p</option>
+                <option value="1920x1080" selected>1080p</option>
+              </select>
+            </div>
+            <div>
+              <label for="customFps">FPS</label>
+              <select id="customFps">
+                <option value="30">30 fps</option>
+                <option value="60" selected>60 fps</option>
+              </select>
+            </div>
+          </div>
+          <div class="range-row">
+            <span>Bitrate máximo</span>
+            <strong id="customBitrateLabel">25 Mbps</strong>
+          </div>
+          <input id="customBitrate" type="range" min="2" max="100" step="1" value="25" />
+          <label class="check-row">
+            <input id="customAdaptive" type="checkbox" />
+            <span>Bitrate adaptativo (desce se travar e sobe liso)</span>
+          </label>
+        </div>
+
+        <button id="playBtn" class="btn-primary">Ligar PS5 e Jogar</button>
+        <button id="cancelBtn" class="btn-cancel" type="button">Cancelar</button>
+        <button id="endSessionLobbyBtn" class="btn-danger" type="button" style="width:100%;margin-top:8px;display:none;">Encerrar sessão do PS5 (trocar qualidade)</button>
+        <button id="restLobbyBtn" class="btn-cancel" type="button" style="display:none;color:var(--warning);">Colocar PS5 em Modo Repouso</button>
+        <div id="lobbyError" class="error-box"></div>
+      </section>
+
+      <div class="right-stack">
+        <section class="card">
+          <div class="card-header">
+            <span class="card-title">Sala ao vivo</span>
+            <span id="lobbyRoomCount" class="muted-note">0 pessoas</span>
+          </div>
+          <div id="lobbyMemberList" class="member-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <span class="live-pill">MEDIDOR AO VIVO (até o host)</span>
+            <button id="speedTestBtn" class="btn-ghost" type="button">Medir de novo</button>
+          </div>
+          <div class="net-stats">
+            <div class="net-stat">
+              <div class="net-stat-label">Ping médio / Jitter</div>
+              <div id="netPingValue" class="net-stat-value">— ms</div>
+            </div>
+            <div class="net-stat">
+              <div class="net-stat-label">Velocidade (Host → Você)</div>
+              <div id="netSpeedValue" class="net-stat-value">Medindo...</div>
+            </div>
+          </div>
+          <div class="net-rec">
+            <span id="netRecText">Calculando qualidade ideal...</span>
+            <button id="applyRecBtn" class="btn-accent-soft" type="button" style="display:none;flex-shrink:0;">Aplicar ideal</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <span class="card-title">GPU Boost (Upscale no navegador)</span>
+            <button id="lobbyBoostToggle" class="btn-ghost" type="button">Desligado</button>
+          </div>
+          <div class="muted-note" style="margin-bottom:6px;">Usa a placa de vídeo do seu navegador (WebGL2) para deixar a imagem mais nítida e limpa mesmo em bitrates menores.</div>
+          <div class="boost-presets" id="lobbyBoostPresets">
+            <button type="button" class="btn-ghost" data-boost-preset="off">Desligado</button>
+            <button type="button" class="btn-ghost" data-boost-preset="soft">Suave</button>
+            <button type="button" class="btn-ghost" data-boost-preset="balanced">Equilibrado</button>
+            <button type="button" class="btn-ghost" data-boost-preset="max">Forte</button>
+          </div>
+          <div class="boost-sliders">
+            <div class="boost-slider-item">
+              <label><span>Nitidez / Upscale</span><strong id="lobbySharpVal">65%</strong></label>
+              <input id="lobbySharp" type="range" min="0" max="100" step="1" value="65" />
+            </div>
+            <div class="boost-slider-item">
+              <label><span>Suavizar blocos</span><strong id="lobbyDebandVal">25%</strong></label>
+              <input id="lobbyDeband" type="range" min="0" max="100" step="1" value="25" />
+            </div>
+            <div class="boost-slider-item">
+              <label><span>Contraste</span><strong id="lobbyContrastVal">15%</strong></label>
+              <input id="lobbyContrast" type="range" min="0" max="100" step="1" value="15" />
+            </div>
+            <div class="boost-slider-item">
+              <label><span>Vibração de cor</span><strong id="lobbyVibranceVal">20%</strong></label>
+              <input id="lobbyVibrance" type="range" min="0" max="100" step="1" value="20" />
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+            <div class="card-header" style="margin-bottom:6px;">
+              <span class="card-title" style="font-size:13px;">Frame Generation (WebGL2)</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <button id="lobbyVsyncToggle" class="btn-ghost" type="button" title="Sincronizar com o VSync do monitor (recomendado para Frame Gen suave)">VSync: Ligado</button>
+                <button id="lobbyLowLatencyToggle" class="btn-ghost" type="button" title="Input a 250 Hz (4 ms) e fila mínima de decodificação">250 Hz: Ligado</button>
+              </div>
+            </div>
+            <div class="muted-note" style="margin-bottom:8px;">Gera frames extras na GPU do navegador. <strong>Baixa Latência</strong> extrapola sem fila extra; <strong>Suave 2×</strong> interpola (30→60 ou 60→120+ fps).</div>
+            <div class="boost-presets" id="lobbyFgModes">
+              <button type="button" class="btn-ghost" data-fg-mode="off">Desligado</button>
+              <button type="button" class="btn-ghost" data-fg-mode="extrapolation">Baixa Latência</button>
+              <button type="button" class="btn-ghost" data-fg-mode="interpolation">Suave 2×</button>
+            </div>
+            <div id="lobbyVsyncWarn" class="muted-note" style="color:var(--warning);margin-top:6px;display:none;">⚠ O Frame Gen funciona melhor e muito mais liso com VSync ligado. Desative o VSync apenas se priorizar o menor atraso possível.</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <span class="card-title">Controles</span>
+          </div>
+          <div id="gamepadStatus" class="muted-note" style="margin-bottom:10px;">Nenhum controle detectado ainda. Conecte um controle USB/Bluetooth e aperte qualquer botão.</div>
+          <div class="kbd-grid">
+            <span class="kbd-item"><kbd>WASD</kbd> Esq.</span>
+            <span class="kbd-item"><kbd>IJKL</kbd> / Mouse Dir.</span>
+            <span class="kbd-item"><kbd>Setas</kbd> D-pad</span>
+            <span class="kbd-item"><kbd>Enter</kbd> X</span>
+            <span class="kbd-item"><kbd>Backspace</kbd> O</span>
+            <span class="kbd-item"><kbd>Espaço</kbd> Quad.</span>
+            <span class="kbd-item"><kbd>Tab</kbd> Triâng.</span>
+            <span class="kbd-item"><kbd>Q</kbd><kbd>E</kbd> L1/R1</span>
+            <span class="kbd-item"><kbd>1</kbd><kbd>3</kbd> L2/R2</span>
+            <span class="kbd-item"><kbd>O</kbd> Options</span>
+            <span class="kbd-item"><kbd>P</kbd> PS</span>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <section id="streamView" class="stream-view">
+    <canvas id="videoCanvas" width="1920" height="1080"></canvas>
+
+    <div id="cornerStats" class="corner-stats">
+      <span id="cornerMsDot" class="ms-dot"></span>
+      <span><strong id="cornerMs">—</strong> ms</span>
+      <span>·</span>
+      <span><strong id="cornerFps">0</strong> fps</span>
+      <span>·</span>
+      <span id="cornerRes">—</span>
+      <span>·</span>
+      <span><strong id="cornerMbps">0.0</strong> Mbps</span>
+      <span id="cornerAdaptive" class="corner-adaptive" style="display:none;">· Adapt.</span>
+      <span id="cornerBoost" class="corner-boost" style="display:none;">· GPU</span>
+      <span id="cornerFg" class="corner-boost" style="display:none;">· FG</span>
+      <span>·</span>
+      <span id="cornerRole" class="corner-role">Assistindo</span>
+    </div>
+
+    <aside id="partyOverlay" class="party-overlay">
+      <div class="party-head">
+        <span id="partyTitle">SALA · 0</span>
+        <button id="partyToggleBtn" class="party-toggle" type="button">—</button>
+      </div>
+      <div id="partyList" class="party-list"></div>
+    </aside>
+
+    <div id="hud" class="hud">
+      <div class="vol-wrap">
+        <button id="audioBtn" class="btn-ghost" type="button">Som</button>
+        <input id="volSlider" class="vol-slider" type="range" min="0" max="100" value="100" title="Volume" />
+      </div>
+      <button id="gpuBoostBtn" class="btn-ghost" type="button" title="Nitidez e upscale via placa de vídeo (WebGL2)">GPU Boost: OFF</button>
+      <button id="frameGenBtn" class="btn-ghost" type="button" title="Alternar Frame Generation na GPU do navegador (F7)">Frame Gen: OFF</button>
+      <button id="mouseStickBtn" class="btn-ghost" type="button" title="Usar mouse como analógico direito (Esc solta)">Mouse: OFF</button>
+      <button id="clipBtn" class="btn-ghost" type="button" title="Salvar últimos 30s no host">Clipe 30s</button>
+      <button id="psBtn" class="btn-ghost" type="button">Botão PS</button>
+      <button id="unlockPsBtn" class="btn-ghost" type="button" style="display:none;">Destravar PS</button>
+      <button id="fsBtn" class="btn-ghost" type="button">Tela cheia</button>
+      <button id="restHudBtn" class="btn-ghost" type="button" style="display:none;color:var(--warning);">Repouso PS5</button>
+      <button id="leaveBtn" class="btn-ghost" type="button" title="Voltar ao lobby sem desconectar o PS5 (não pausa o jogo)">Voltar ao lobby</button>
+      <button id="stopBtn" class="btn-danger" type="button" title="Encerrar sessão do Remote Play no PS5">Encerrar PS5</button>
+    </div>
+
+    <div id="gpuBoostPopover" class="boost-popover">
+      <div class="boost-pop-head">
+        <h4>GPU Boost &amp; Frame Gen</h4>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button id="hudBoostToggle" class="btn-ghost" type="button">Desligado</button>
+          <button id="hudBoostClose" class="btn-ghost" type="button">Fechar</button>
+        </div>
+      </div>
+      <div class="boost-presets" id="hudBoostPresets">
+        <button type="button" class="btn-ghost" data-boost-preset="off">Desligado</button>
+        <button type="button" class="btn-ghost" data-boost-preset="soft">Suave</button>
+        <button type="button" class="btn-ghost" data-boost-preset="balanced">Equilibrado</button>
+        <button type="button" class="btn-ghost" data-boost-preset="max">Forte</button>
+      </div>
+      <div class="boost-sliders">
+        <div class="boost-slider-item">
+          <label><span>Nitidez / Upscale</span><strong id="hudSharpVal">65%</strong></label>
+          <input id="hudSharp" type="range" min="0" max="100" step="1" value="65" />
+        </div>
+        <div class="boost-slider-item">
+          <label><span>Suavizar blocos</span><strong id="hudDebandVal">25%</strong></label>
+          <input id="hudDeband" type="range" min="0" max="100" step="1" value="25" />
+        </div>
+        <div class="boost-slider-item">
+          <label><span>Contraste</span><strong id="hudContrastVal">15%</strong></label>
+          <input id="hudContrast" type="range" min="0" max="100" step="1" value="15" />
+        </div>
+        <div class="boost-slider-item">
+          <label><span>Vibração de cor</span><strong id="hudVibranceVal">20%</strong></label>
+          <input id="hudVibrance" type="range" min="0" max="100" step="1" value="20" />
+        </div>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <div class="boost-pop-head" style="margin-bottom:6px;">
+          <span style="font-size:12px;font-weight:700;">Frame Generation (F7)</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button id="hudVsyncToggle" class="btn-ghost" type="button">VSync: Ligado</button>
+            <button id="hudLowLatencyToggle" class="btn-ghost" type="button">250 Hz: Ligado</button>
+          </div>
+        </div>
+        <div class="boost-presets" id="hudFgModes" style="margin-bottom:6px;">
+          <button type="button" class="btn-ghost" data-fg-mode="off">Desligado</button>
+          <button type="button" class="btn-ghost" data-fg-mode="extrapolation">Baixa Latência</button>
+          <button type="button" class="btn-ghost" data-fg-mode="interpolation">Suave 2×</button>
+        </div>
+        <div id="hudVsyncWarn" class="boost-pop-note" style="color:var(--warning);display:none;">⚠ O Frame Gen funciona melhor e muito mais liso com VSync ligado. Desative o VSync apenas se priorizar o menor atraso possível.</div>
+        <div id="fgStatusNote" class="boost-pop-note">Frame Gen desligado</div>
+      </div>
+      <div id="gpuBoostBackendNote" class="boost-pop-note">WebGL2 pronto · processado ao vivo na sua GPU</div>
+    </div>
+
+    <div id="streamBanner" class="hud-banner"></div>
+  </section>
+
+  <div id="psUnlockModal" class="modal-backdrop">
+    <div class="modal-box">
+      <h3>Desbloquear botão PS</h3>
+      <p class="muted-note" style="margin:0 0 12px 0;">O botão PS está bloqueado para manter o jogo protegido. Digite a senha separada do dono se você tiver permissão:</p>
+      <form id="psUnlockForm">
+        <input id="psUnlockInput" type="password" placeholder="Senha do botão PS" autocomplete="off" required />
+        <div id="psUnlockErr" class="error-box" style="margin:0 0 10px 0;"></div>
+        <div class="modal-actions">
+          <button id="psUnlockCancel" class="btn-secondary" type="button">Cancelar</button>
+          <button class="btn-primary" style="width:auto;" type="submit">Destravar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("t") || "";
+
+    const logoSrc = `/logo.png?t=${encodeURIComponent(token)}`;
+    document.getElementById("brandLogo").src = logoSrc;
+    document.getElementById("faviconLink").href = logoSrc;
+
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    const themeToggleLabel = document.getElementById("themeToggleLabel");
+    function applyPageTheme(light) {
+      document.documentElement.dataset.theme = light ? "light" : "dark";
+      themeToggleLabel.textContent = light ? "Obsidian" : "PS1 Claro";
+      try { localStorage.setItem("cord_theme", light ? "light" : "dark"); } catch {}
+    }
+    applyPageTheme((() => { try { return localStorage.getItem("cord_theme") === "light"; } catch { return false; } })());
+    themeToggleBtn.addEventListener("click", () => {
+      applyPageTheme(document.documentElement.dataset.theme !== "light");
+    });
+
+    const nameGate = document.getElementById("nameGate");
+    const nameForm = document.getElementById("nameForm");
+    const nameInput = document.getElementById("nameInput");
+    const dailyPassField = document.getElementById("dailyPassField");
+    const dailyPassInput = document.getElementById("dailyPassInput");
+    const gateErrorEl = document.getElementById("gateError");
+    const waitingGate = document.getElementById("waitingGate");
+    const waitingPlayerNameEl = document.getElementById("waitingPlayerName");
+    const cancelWaitBtn = document.getElementById("cancelWaitBtn");
+    const playerChip = document.getElementById("playerChip");
+    const playerChipName = document.getElementById("playerChipName");
+
+    const launcher = document.getElementById("launcher");
+    const streamView = document.getElementById("streamView");
+    const heroRingsEl = document.getElementById("heroRings");
+    const consoleNameEl = document.getElementById("consoleName");
+    const statusRowEl = document.getElementById("statusRow");
+    const statusDotEl = document.getElementById("statusDot");
+    const statusTextEl = document.getElementById("statusText");
+    const cooldownBoxEl = document.getElementById("cooldownBox");
+    const cooldownTextEl = document.getElementById("cooldownText");
+    const cooldownFillEl = document.getElementById("cooldownFill");
+    const qualitySelectEl = document.getElementById("qualitySelect");
+    const customPanelEl = document.getElementById("customPanel");
+    const customResEl = document.getElementById("customRes");
+    const customFpsEl = document.getElementById("customFps");
+    const customBitrateEl = document.getElementById("customBitrate");
+    const customBitrateLabelEl = document.getElementById("customBitrateLabel");
+    const customAdaptiveEl = document.getElementById("customAdaptive");
+    const playBtn = document.getElementById("playBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const endSessionLobbyBtn = document.getElementById("endSessionLobbyBtn");
+    const restLobbyBtn = document.getElementById("restLobbyBtn");
+    const lobbyErrorEl = document.getElementById("lobbyError");
+    const lobbyRoomCountEl = document.getElementById("lobbyRoomCount");
+    const lobbyMemberListEl = document.getElementById("lobbyMemberList");
+    const netPingValueEl = document.getElementById("netPingValue");
+    const netSpeedValueEl = document.getElementById("netSpeedValue");
+    const netRecTextEl = document.getElementById("netRecText");
+    const speedTestBtn = document.getElementById("speedTestBtn");
+    const applyRecBtn = document.getElementById("applyRecBtn");
+    const gamepadStatusEl = document.getElementById("gamepadStatus");
+
+    const canvas = document.getElementById("videoCanvas");
+    const cornerMsDotEl = document.getElementById("cornerMsDot");
+    const cornerMsEl = document.getElementById("cornerMs");
+    const cornerFpsEl = document.getElementById("cornerFps");
+    const cornerResEl = document.getElementById("cornerRes");
+    const cornerMbpsEl = document.getElementById("cornerMbps");
+    const cornerAdaptiveEl = document.getElementById("cornerAdaptive");
+    const cornerBoostEl = document.getElementById("cornerBoost");
+    const cornerFgEl = document.getElementById("cornerFg");
+    const cornerRoleEl = document.getElementById("cornerRole");
+    const partyOverlayEl = document.getElementById("partyOverlay");
+    const partyTitleEl = document.getElementById("partyTitle");
+    const partyToggleBtn = document.getElementById("partyToggleBtn");
+    const partyListEl = document.getElementById("partyList");
+    const hudEl = document.getElementById("hud");
+    const audioBtn = document.getElementById("audioBtn");
+    const volSlider = document.getElementById("volSlider");
+    const gpuBoostBtn = document.getElementById("gpuBoostBtn");
+    const frameGenBtn = document.getElementById("frameGenBtn");
+    const gpuBoostPopover = document.getElementById("gpuBoostPopover");
+    const hudBoostToggle = document.getElementById("hudBoostToggle");
+    const hudBoostClose = document.getElementById("hudBoostClose");
+    const lobbyBoostToggle = document.getElementById("lobbyBoostToggle");
+    const lobbyVsyncToggle = document.getElementById("lobbyVsyncToggle");
+    const hudVsyncToggle = document.getElementById("hudVsyncToggle");
+    const lobbyVsyncWarn = document.getElementById("lobbyVsyncWarn");
+    const hudVsyncWarn = document.getElementById("hudVsyncWarn");
+    const lobbyLowLatencyToggle = document.getElementById("lobbyLowLatencyToggle");
+    const hudLowLatencyToggle = document.getElementById("hudLowLatencyToggle");
+    const fgStatusNote = document.getElementById("fgStatusNote");
+    const gpuBoostBackendNote = document.getElementById("gpuBoostBackendNote");
+    const mouseStickBtn = document.getElementById("mouseStickBtn");
+    const clipBtn = document.getElementById("clipBtn");
+    const psBtn = document.getElementById("psBtn");
+    const unlockPsBtn = document.getElementById("unlockPsBtn");
+    const fsBtn = document.getElementById("fsBtn");
+    const restHudBtn = document.getElementById("restHudBtn");
+    const leaveBtn = document.getElementById("leaveBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const streamBannerEl = document.getElementById("streamBanner");
+
+    const psUnlockModal = document.getElementById("psUnlockModal");
+    const psUnlockForm = document.getElementById("psUnlockForm");
+    const psUnlockInput = document.getElementById("psUnlockInput");
+    const psUnlockErr = document.getElementById("psUnlockErr");
+    const psUnlockCancel = document.getElementById("psUnlockCancel");
+
+    const AVATAR_COLORS = ["#1B64F2", "#28B872", "#C96B27", "#2B8EA3", "#9A67EA", "#B88424"];
+
+    let ws = null;
+    let latestStatus = null;
+    let myName = (localStorage.getItem("cord_player_name") || "").trim();
+    let myDailyPass = "";
+    let myClientId = null;
+    let joinIntent = false;
+    let isApproved = false;
+    let isPending = false;
+    let kickedReason = null;
+    let psUnlocked = false;
+    let spectatorPaused = false;
+
+    let videoDecoder = null;
+    let audioDecoder = null;
+    let audioCtx = null;
+    let audioNode = null;
+    let audioGain = null;
+    let audioMuted = false;
+    let audioVolume = parseFloat(localStorage.getItem("cord_volume") || "1");
+    if (Number.isNaN(audioVolume)) audioVolume = 1;
+    volSlider.value = String(Math.round(Math.max(0, Math.min(1, audioVolume)) * 100));
+
+    let awaitingKeyframe = true;
+    let currentCodec = null;
+    let currentConfigKey = null;
+    let lastMediaConfig = null;
+    let configureGen = 0;
+    let stallSeconds = 0;
+    let fpsCounter = 0;
+    let decodedFpsCounter = 0;
+    let videoBytesCounter = 0;
+    let lastRttMs = -1;
+    let lastReportedMbps = 0;
+    let lastReportedFps = 60;
+    let lastNonIdleInputMs = 0;
+    let lastResumeKeyframeMs = 0;
+    let hudTimer = null;
+    let bannerTimer = null;
+    let psPulseUntil = 0;
+    let lastSentInput = new Uint8Array(15);
+    let lastInputSendMs = 0;
+
+    let mouseLookEnabled = false;
+    let mouseVelX = 0;
+    let mouseVelY = 0;
+    let mouseDownLeft = false;
+    let mouseDownRight = false;
+
+    let cooldownEndsAt = 0;
+    let cooldownReadyUntil = 0;
+    const rttSamples = [];
+    let measuredMbps = null;
+    let speedTestRunning = false;
+    let recommendedQuality = null;
+
+    const WORKLET_CODE = `
+      class RingAudioProcessor extends AudioWorkletProcessor {
+        constructor() {
+          super();
+          this.cap = 8192;
+          this.left = new Float32Array(this.cap);
+          this.right = new Float32Array(this.cap);
+          this.r = 0;
+          this.w = 0;
+          this.count = 0;
+          this.port.onmessage = (e) => {
+            const { l, r } = e.data;
+            const n = l.length;
+            for (let i = 0; i < n; i++) {
+              this.left[this.w] = l[i];
+              this.right[this.w] = r[i];
+              this.w = (this.w + 1) % this.cap;
+            }
+            this.count = Math.min(this.cap, this.count + n);
+            if (this.count > 3840) {
+              const drop = this.count - 1440;
+              this.r = (this.r + drop) % this.cap;
+              this.count -= drop;
+            }
+          };
+        }
+        process(_inputs, outputs) {
+          const outL = outputs[0][0];
+          const outR = outputs[0][1] || outputs[0][0];
+          const len = outL.length;
+          if (this.count < len) {
+            outL.fill(0);
+            if (outR !== outL) outR.fill(0);
+            return true;
+          }
+          for (let i = 0; i < len; i++) {
+            outL[i] = this.left[this.r];
+            if (outR !== outL) outR[i] = this.right[this.r];
+            this.r = (this.r + 1) % this.cap;
+          }
+          this.count -= len;
+          return true;
+        }
+      }
+      registerProcessor("cord-ring-audio", RingAudioProcessor);
+    `;
+
+    function apiUrl(path) {
+      const sep = path.includes("?") ? "&" : "?";
+      return `${path}${sep}t=${encodeURIComponent(token)}`;
+    }
+
+    function apiHeaders(extra = {}) {
+      const headers = { ...extra };
+      if (myClientId) headers["X-Cord-Client-Id"] = myClientId;
+      return headers;
+    }
+
+    function avatarColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    function isController() {
+      if (!isApproved || !latestStatus) return false;
+      if (!latestStatus.controllerAllowed) return false;
+      if (!latestStatus.controllerClientId) return true;
+      return myClientId !== null && latestStatus.controllerClientId === myClientId;
+    }
+
+    function showGateError(msg) {
+      gateErrorEl.style.display = msg ? "block" : "none";
+      gateErrorEl.textContent = msg || "";
+    }
+
+    function showNameGate(errorMsg = "") {
+      nameInput.value = myName;
+      nameGate.style.display = "flex";
+      waitingGate.style.display = "none";
+      launcher.style.display = "none";
+      streamView.classList.remove("active");
+      showGateError(errorMsg);
+      setTimeout(() => nameInput.focus(), 50);
+    }
+
+    function showWaitingGate() {
+      isPending = true;
+      isApproved = false;
+      waitingPlayerNameEl.textContent = myName;
+      nameGate.style.display = "none";
+      waitingGate.style.display = "flex";
+      launcher.style.display = "none";
+      streamView.classList.remove("active");
+    }
+
+    function showApprovedLauncher() {
+      isApproved = true;
+      isPending = false;
+      playerChipName.textContent = myName;
+      playerChip.style.display = "inline-flex";
+      nameGate.style.display = "none";
+      waitingGate.style.display = "none";
+      launcher.style.display = "block";
+      if (latestStatus) updateStatusUi(latestStatus);
+      setTimeout(runSpeedTest, 500);
+    }
+
+    function sendJoin() {
+      if (joinIntent && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "join", name: myName, password: myDailyPass }));
+      }
+    }
+
+    nameForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      showGateError("");
+      kickedReason = null;
+      myName = nameInput.value.trim().slice(0, 24) || "Jogador";
+      myDailyPass = (dailyPassInput.value || "").trim().toUpperCase();
+      localStorage.setItem("cord_player_name", myName);
+      joinIntent = true;
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
+        connectWebSocket();
+      } else {
+        sendJoin();
+      }
+    });
+
+    cancelWaitBtn.addEventListener("click", () => {
+      joinIntent = false;
+      isPending = false;
+      showNameGate();
+    });
+
+    playerChip.addEventListener("click", () => {
+      joinIntent = false;
+      isApproved = false;
+      isPending = false;
+      showNameGate();
+    });
+
+    if (myName) nameInput.value = myName;
+    showNameGate();
+
+    function showLobbyError(msg) {
+      lobbyErrorEl.style.display = msg ? "block" : "none";
+      lobbyErrorEl.textContent = msg || "";
+    }
+
+    function showStreamBanner(msg, autoHideMs = 0) {
+      clearTimeout(bannerTimer);
+      if (!msg) {
+        streamBannerEl.style.display = "none";
+        streamBannerEl.textContent = "";
+      } else {
+        streamBannerEl.style.display = "flex";
+        streamBannerEl.textContent = msg;
+        if (autoHideMs > 0) {
+          bannerTimer = setTimeout(() => { streamBannerEl.style.display = "none"; }, autoHideMs);
+        }
+      }
+    }
+
+    function syncCustomPanel() {
+      const isCustom = qualitySelectEl.value === "custom";
+      customPanelEl.style.display = isCustom ? "block" : "none";
+      customBitrateLabelEl.textContent = `${customBitrateEl.value} Mbps`;
+    }
+
+    qualitySelectEl.addEventListener("change", syncCustomPanel);
+    customBitrateEl.addEventListener("input", syncCustomPanel);
+    syncCustomPanel();
+
+    const gpuBoost = (() => {
+      const defaults = { enabled: false, sharpness: 65, deband: 25, contrast: 15, vibrance: 20 };
+      try {
+        const saved = JSON.parse(localStorage.getItem("cord_gpu_boost") || "null");
+        if (saved && typeof saved === "object") {
+          return {
+            enabled: Boolean(saved.enabled),
+            sharpness: clampPct(saved.sharpness, defaults.sharpness),
+            deband: clampPct(saved.deband, defaults.deband),
+            contrast: clampPct(saved.contrast, defaults.contrast),
+            vibrance: clampPct(saved.vibrance, defaults.vibrance)
+          };
+        }
+      } catch {}
+      return { ...defaults };
+    })();
+
+    const frameGen = (() => {
+      let mode = "off";
+      let lowLatency = true;
+      let vsync = true;
+      try {
+        const savedMode = localStorage.getItem("cord_frame_gen");
+        if (savedMode === "extrapolation" || savedMode === "interpolation" || savedMode === "off") mode = savedMode;
+        const savedLl = localStorage.getItem("cord_low_latency");
+        if (savedLl === "0") lowLatency = false;
+        const savedVsync = localStorage.getItem("cord_vsync");
+        if (savedVsync === "0") vsync = false;
+      } catch {}
+      return { mode, lowLatency, vsync };
+    })();
+
+    function clampPct(v, fallback) {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : fallback;
+    }
+
+    function createVideoRenderer(targetCanvas) {
+      let srcW = 1920;
+      let srcH = 1080;
+      let allocVideoW = 0;
+      let allocVideoH = 0;
+      let hasCurr = false;
+      let hasPrev = false;
+      let hasPrevFlow = false;
+      let measuredDisplayHz = 60;
+      let lastRafMs = 0;
+      let lastUniqueMs = 0;
+      let intervalStartMs = 0;
+      let avgSourceIntervalMs = 16.67;
+      let detectedSourceFps = 60;
+      let sceneCutActive = false;
+      let staticSceneActive = false;
+      let generatedThisInterval = false;
+      let slotStartMs = 0;
+      let avgSlotIntervalMs = 16.67;
+      let lastSlotAlpha = 0;
+      let recentDecodedFps = 60;
+      let needsRedraw = false;
+      let prevWasDup = false;
+      let altDupWindow = [];
+      let fgStatusText = "Frame Gen desligado";
+      let rafHandle = 0;
+      let pendingFrame = null;
+
+      function closeVideoFrameSafe(frame) {
+        if (frame) {
+          try { frame.close(); } catch {}
+        }
+      }
+
+      const gl = targetCanvas.getContext("webgl2", {
+        alpha: false,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        preserveDrawingBuffer: true,
+        powerPreference: "high-performance"
+      });
+
+      if (!gl) {
+        const ctx2d = targetCanvas.getContext("2d", { alpha: false });
+        return {
+          isWebGl2: false,
+          getFrameGenStatus: () => "WebGL2 indisponível",
+          setSourceSize(w, h) {
+            if (w > 0 && h > 0) { srcW = w; srcH = h; }
+          },
+          resize() {
+            if (targetCanvas.width !== srcW || targetCanvas.height !== srcH) {
+              targetCanvas.width = srcW;
+              targetCanvas.height = srcH;
+            }
+          },
+          clearFrame() {
+            hasCurr = false;
+            hasPrev = false;
+            ctx2d?.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+          },
+          submitFrame(frame) {
+            try {
+              const w = frame.displayWidth || srcW;
+              const h = frame.displayHeight || srcH;
+              srcW = w; srcH = h;
+              if (targetCanvas.width !== w || targetCanvas.height !== h) {
+                targetCanvas.width = w;
+                targetCanvas.height = h;
+              }
+              ctx2d?.drawImage(frame, 0, 0, w, h);
+              return true;
+            } finally {
+              closeVideoFrameSafe(frame);
+            }
+          },
+          setDecodedFps() {},
+          redraw() {},
+          setRenderActive() {}
+        };
+      }
+
+      const vsScreen = `#version 300 es
+        out vec2 vUv;
+        void main() {
+          vec2 pos = vec2(gl_VertexID == 1 ? 3.0 : -1.0, gl_VertexID == 2 ? 3.0 : -1.0);
+          vUv = vec2(pos.x * 0.5 + 0.5, 0.5 - pos.y * 0.5);
+          gl_Position = vec4(pos, 0.0, 1.0);
+        }
+      `;
+
+      const vsFbo = `#version 300 es
+        out vec2 vUv;
+        void main() {
+          vec2 pos = vec2(gl_VertexID == 1 ? 3.0 : -1.0, gl_VertexID == 2 ? 3.0 : -1.0);
+          vUv = pos * 0.5 + 0.5;
+          gl_Position = vec4(pos, 0.0, 1.0);
+        }
+      `;
+
+      const fsLuma = `#version 300 es
+        precision highp float;
+        uniform sampler2D uSrc;
+        in vec2 vUv;
+        out vec4 fragColor;
+        void main() {
+          vec3 c = texture(uSrc, vUv).rgb;
+          float y = dot(c, vec3(0.299, 0.587, 0.114));
+          fragColor = vec4(y, y, y, 1.0);
+        }
+      `;
+
+      const fsDownsample = `#version 300 es
+        precision highp float;
+        uniform sampler2D uSrc;
+        uniform vec2 uHalfTexel;
+        in vec2 vUv;
+        out vec4 fragColor;
+        void main() {
+          vec4 a = texture(uSrc, vUv + vec2(-uHalfTexel.x, -uHalfTexel.y));
+          vec4 b = texture(uSrc, vUv + vec2( uHalfTexel.x, -uHalfTexel.y));
+          vec4 c = texture(uSrc, vUv + vec2(-uHalfTexel.x,  uHalfTexel.y));
+          vec4 d = texture(uSrc, vUv + vec2( uHalfTexel.x,  uHalfTexel.y));
+          fragColor = (a + b + c + d) * 0.25;
+        }
+      `;
+
+      const fsMad = `#version 300 es
+        precision highp float;
+        uniform sampler2D uNewLuma;
+        uniform sampler2D uCurrLuma;
+        uniform sampler2D uPrevCadence;
+        uniform float uHasCurr;
+        out vec4 fragColor;
+        void main() {
+          if (uHasCurr < 0.5) {
+            fragColor = vec4(0.05, 1.0, 0.0, 0.0);
+            return;
+          }
+          float sum = 0.0;
+          for (int gy = 0; gy < 7; gy++) {
+            float v = (float(gy) + 0.5) / 7.0;
+            for (int gx = 0; gx < 12; gx++) {
+              float u = (float(gx) + 0.5) / 12.0;
+              float a = texture(uNewLuma, vec2(u, v)).r;
+              float b = texture(uCurrLuma, vec2(u, v)).r;
+              sum += abs(a - b);
+            }
+          }
+          float mad = clamp(sum / 84.0, 0.0, 1.0);
+          float isSceneCut = mad > 0.22 ? 1.0 : 0.0;
+          float isDup = (isSceneCut < 0.5 && mad < 0.0014) ? 1.0 : 0.0;
+          float isUnique = 1.0 - isDup;
+          float prevStreak = floor(texture(uPrevCadence, vec2(0.5)).a * 8.0 + 0.5);
+          float nextStreak = isDup > 0.5 ? min(8.0, prevStreak + 1.0) : 0.0;
+          fragColor = vec4(mad, isUnique, isSceneCut, nextStreak / 8.0);
+        }
+      `;
+
+      const fsCondCopy = `#version 300 es
+        precision highp float;
+        uniform sampler2D uSrc;
+        uniform sampler2D uCadence;
+        uniform float uForceCopy;
+        in vec2 vUv;
+        out vec4 fragColor;
+        void main() {
+          if (uForceCopy < 0.5 && texture(uCadence, vec2(0.5)).g < 0.5) discard;
+          fragColor = texture(uSrc, vUv);
+        }
+      `;
+
+      const fsOpticalFlow = `#version 300 es
+        precision highp float;
+        uniform sampler2D uCurr;
+        uniform sampler2D uPrev;
+        uniform sampler2D uCoarseFlow;
+        uniform vec2 uLevelSize;
+        uniform float uLevelStep;
+        uniform float uHasCoarse;
+        uniform float uUseHalfFloat;
+        uniform int uRadius;
+        in vec2 vUv;
+        out vec4 fragColor;
+
+        vec2 decodeFlow(vec2 rg) {
+          if (uUseHalfFloat > 0.5) return rg;
+          return ((rg * 255.0 - 127.0) / 127.0) * 48.0;
+        }
+
+        vec2 encodeFlow(vec2 fullPx) {
+          if (uUseHalfFloat > 0.5) return fullPx;
+          return floor(clamp(fullPx / 48.0, -1.0, 1.0) * 127.0 + 127.5) / 255.0;
+        }
+
+        float patchZsad(vec2 pShift, vec2 invSize, float meanC, out float rawSad) {
+          float pVals[9];
+          float sumP = 0.0;
+          int idx = 0;
+          for (int oy = -1; oy <= 1; oy++) {
+            for (int ox = -1; ox <= 1; ox++) {
+              vec2 off = vec2(float(ox), float(oy)) * invSize;
+              float pv = texture(uPrev, vUv + off - pShift).r;
+              pVals[idx++] = pv;
+              sumP += pv;
+            }
+          }
+          float meanP = sumP / 9.0;
+          float zsad = 0.0;
+          rawSad = 0.0;
+          idx = 0;
+          for (int oy2 = -1; oy2 <= 1; oy2++) {
+            for (int ox2 = -1; ox2 <= 1; ox2++) {
+              vec2 off = vec2(float(ox2), float(oy2)) * invSize;
+              float cv = texture(uCurr, vUv + off).r;
+              float pv = pVals[idx++];
+              rawSad += abs(cv - pv);
+              zsad += abs((cv - meanC) - (pv - meanP));
+            }
+          }
+          return zsad;
+        }
+
+        void main() {
+          vec2 invSize = 1.0 / uLevelSize;
+          float sumC = 0.0;
+          float minC = 1.0;
+          float maxC = 0.0;
+          for (int oy = -1; oy <= 1; oy++) {
+            for (int ox = -1; ox <= 1; ox++) {
+              float cv = texture(uCurr, vUv + vec2(float(ox), float(oy)) * invSize).r;
+              sumC += cv;
+              minC = min(minC, cv);
+              maxC = max(maxC, cv);
+            }
+          }
+          float meanC = sumC / 9.0;
+          float patchRange = maxC - minC;
+
+          float zeroRaw = 0.0;
+          float zeroZsad = patchZsad(vec2(0.0), invSize, meanC, zeroRaw);
+          if (patchRange < 0.025 || zeroRaw < 0.030) {
+            fragColor = vec4(encodeFlow(vec2(0.0)), 1.0, 1.0);
+            return;
+          }
+
+          vec2 priorPx = vec2(0.0);
+          if (uHasCoarse > 0.5) {
+            priorPx = decodeFlow(texture(uCoarseFlow, vUv).rg);
+          }
+
+          vec2 priorLevelPx = priorPx / uLevelStep;
+          float dummyRaw = 0.0;
+          float bestZsad = patchZsad(priorLevelPx * invSize, invSize, meanC, dummyRaw);
+          float bestCost = bestZsad;
+          vec2 bestDelta = vec2(0.0);
+
+          for (int dy = -2; dy <= 2; dy++) {
+            if (abs(dy) > uRadius) continue;
+            for (int dx = -2; dx <= 2; dx++) {
+              if (abs(dx) > uRadius || (dx == 0 && dy == 0)) continue;
+              vec2 cand = priorLevelPx + vec2(float(dx), float(dy));
+              float zsad = patchZsad(cand * invSize, invSize, meanC, dummyRaw);
+              float cost = zsad + 0.005 * (abs(float(dx)) + abs(float(dy)));
+              if (cost < bestCost) {
+                bestCost = cost;
+                bestZsad = zsad;
+                bestDelta = vec2(float(dx), float(dy));
+              }
+            }
+          }
+
+          if (bestZsad >= zeroZsad * 0.78 - 0.015) {
+            fragColor = vec4(encodeFlow(vec2(0.0)), 1.0, 1.0);
+            return;
+          }
+
+          vec2 bestLvl = priorLevelPx + bestDelta;
+          float sadL = patchZsad((bestLvl + vec2(-0.5, 0.0)) * invSize, invSize, meanC, dummyRaw);
+          float sadR = patchZsad((bestLvl + vec2( 0.5, 0.0)) * invSize, invSize, meanC, dummyRaw);
+          float denomX = 2.0 * (sadL + sadR - 2.0 * bestZsad);
+          if (denomX > 0.0002) bestLvl.x += clamp(0.5 * (sadL - sadR) / denomX, -0.5, 0.5);
+
+          float sadU = patchZsad((bestLvl + vec2(0.0, -0.5)) * invSize, invSize, meanC, dummyRaw);
+          float sadD = patchZsad((bestLvl + vec2(0.0,  0.5)) * invSize, invSize, meanC, dummyRaw);
+          float denomY = 2.0 * (sadU + sadD - 2.0 * bestZsad);
+          if (denomY > 0.0002) bestLvl.y += clamp(0.5 * (sadU - sadD) / denomY, -0.5, 0.5);
+
+          vec2 fullPx = clamp(bestLvl * uLevelStep, -48.0, 48.0);
+          fragColor = vec4(encodeFlow(fullPx), 1.0, 1.0);
+        }
+      `;
+
+      const fsFlowSmooth = `#version 300 es
+        precision highp float;
+        uniform sampler2D uFlowFwd;
+        uniform sampler2D uFlowBwd;
+        uniform sampler2D uGuide;
+        uniform sampler2D uPrevFlow;
+        uniform sampler2D uCadence;
+        uniform vec2 uInvSize;
+        uniform float uUseHalfFloat;
+        uniform float uHasPrevFlow;
+        in vec2 vUv;
+        out vec4 fragColor;
+
+        vec2 decodeFlow(vec2 rg) {
+          if (uUseHalfFloat > 0.5) return rg;
+          return ((rg * 255.0 - 127.0) / 127.0) * 48.0;
+        }
+
+        vec2 encodeFlow(vec2 fullPx) {
+          if (uUseHalfFloat > 0.5) return fullPx;
+          return floor(clamp(fullPx / 48.0, -1.0, 1.0) * 127.0 + 127.5) / 255.0;
+        }
+
+        void main() {
+          vec4 cad = texture(uCadence, vec2(0.5));
+          float dupStreak = floor(cad.a * 8.0 + 0.5);
+          if (cad.b > 0.5 || dupStreak >= 1.5) {
+            fragColor = vec4(encodeFlow(vec2(0.0)), 0.0, 1.0);
+            return;
+          }
+          if (cad.g < 0.5) {
+            fragColor = texture(uPrevFlow, vUv);
+            return;
+          }
+          float xs[9];
+          float ys[9];
+          float ls[9];
+          vec2 rawF[9];
+          vec2 centerFlow = decodeFlow(texture(uFlowFwd, vUv).rg);
+          float maxDiff = 0.0;
+          int k = 0;
+
+          for (int oy = -1; oy <= 1; oy++) {
+            for (int ox = -1; ox <= 1; ox++) {
+              vec2 uv = clamp(vUv + vec2(float(ox), float(oy)) * uInvSize, 0.0, 1.0);
+              vec2 f = decodeFlow(texture(uFlowFwd, uv).rg);
+              rawF[k] = f;
+              xs[k] = f.x;
+              ys[k] = f.y;
+              ls[k] = texture(uGuide, uv).r;
+              maxDiff = max(maxDiff, length(f - centerFlow));
+              k++;
+            }
+          }
+
+          for (int a = 0; a < 5; a++) {
+            for (int b = a + 1; b < 9; b++) {
+              if (xs[b] < xs[a]) { float t = xs[a]; xs[a] = xs[b]; xs[b] = t; }
+              if (ys[b] < ys[a]) { float t = ys[a]; ys[a] = ys[b]; ys[b] = t; }
+            }
+          }
+          vec2 medFlow = vec2(xs[4], ys[4]);
+          float centerL = ls[4];
+
+          vec2 sum = medFlow;
+          float wSum = 1.0;
+          for (int i = 0; i < 9; i++) {
+            if (i == 4) continue;
+            float dL = abs(ls[i] - centerL);
+            float dF = length(rawF[i] - medFlow);
+            float w = exp(-dL * 20.0 - dF * 0.25);
+            sum += rawF[i] * w;
+            wSum += w;
+          }
+          vec2 smoothFwd = sum / max(wSum, 0.0001);
+          if (uHasPrevFlow > 0.5) {
+            vec2 prevF = decodeFlow(texture(uPrevFlow, vUv).rg);
+            if (length(smoothFwd - prevF) < max(6.0, length(smoothFwd) * 0.6)) {
+              smoothFwd = mix(prevF, smoothFwd, 0.72);
+            }
+          }
+
+          vec2 bwdUv = clamp(vUv - smoothFwd / vec2(1280.0, 720.0), 0.0, 1.0);
+          vec2 bwdAtTarget = decodeFlow(texture(uFlowBwd, bwdUv).rg);
+          float fbErr = length(smoothFwd + bwdAtTarget);
+          float flowMag = length(smoothFwd);
+          float fbTol = max(6.0, flowMag);
+          float divTol = max(14.0, flowMag * 1.75);
+          float conf = clamp(1.0 - max(0.0, fbErr - 2.0) / fbTol, 0.0, 1.0)
+                     * clamp(1.0 - max(0.0, maxDiff - 4.0) / divTol, 0.0, 1.0);
+
+          fragColor = vec4(encodeFlow(smoothFwd), conf, 1.0);
+        }
+      `;
+
+      const fsSource = `#version 300 es
+        precision highp float;
+        uniform sampler2D uTexPrev;
+        uniform sampler2D uTexCurr;
+        uniform sampler2D uTexFlow;
+        uniform sampler2D uCadence;
+        uniform vec2 uTexel;
+        uniform float uEnabled;
+        uniform float uSharpness;
+        uniform float uDeband;
+        uniform float uContrast;
+        uniform float uVibrance;
+        uniform int uFgMode;
+        uniform float uFgAlpha;
+        uniform float uSplit30;
+        uniform float uUseHalfFloat;
+        in vec2 vUv;
+        out vec4 fragColor;
+
+        vec2 decodeFlow(vec2 rg) {
+          if (uUseHalfFloat > 0.5) return rg;
+          return ((rg * 255.0 - 127.0) / 127.0) * 48.0;
+        }
+
+        vec3 sampleBase(vec2 uv) {
+          if (uFgMode == 0) {
+            return texture(uTexCurr, uv).rgb;
+          }
+          vec4 cad = texture(uCadence, vec2(0.5));
+          float dupStreak = floor(cad.a * 8.0 + 0.5);
+          if (cad.b > 0.5 || dupStreak >= 1.5) {
+            return texture(uTexCurr, uv).rgb;
+          }
+          float isUnique = cad.g;
+          vec4 flowRaw = texture(uTexFlow, uv);
+          vec2 flowPx = decodeFlow(flowRaw.rg);
+          float conf = flowRaw.b;
+          vec2 uvDelta = flowPx / vec2(1280.0, 720.0);
+
+          if (uFgMode == 1) {
+            float effAlpha = uSplit30 > 0.5
+              ? (isUnique > 0.5 ? uFgAlpha * 0.45 : clamp(0.50 + uFgAlpha * 0.05, 0.0, 0.55))
+              : (isUnique > 0.5 ? min(uFgAlpha, 0.52) : 0.0);
+            if (effAlpha < 0.02 || (uSplit30 < 0.5 && isUnique < 0.5)) {
+              return texture(uTexCurr, uv).rgb;
+            }
+            vec2 srcUv = clamp(uv - uvDelta * effAlpha, 0.0, 1.0);
+            vec3 warped = texture(uTexCurr, srcUv).rgb;
+            vec3 direct = texture(uTexCurr, uv).rgb;
+            float border = clamp(min(min(srcUv.x, 1.0 - srcUv.x), min(srcUv.y, 1.0 - srcUv.y)) * 40.0, 0.0, 1.0);
+            return mix(direct, warped, border * conf);
+          }
+
+          if (uSplit30 < 0.5 && isUnique < 0.5) {
+            return texture(uTexCurr, uv).rgb;
+          }
+          float effAlpha = uSplit30 > 0.5
+            ? (isUnique > 0.5 ? uFgAlpha * 0.5 : 0.5 + uFgAlpha * 0.5)
+            : uFgAlpha;
+          if (effAlpha < 0.02) {
+            return texture(uTexPrev, uv).rgb;
+          }
+
+          vec2 uvPrev = clamp(uv - uvDelta * effAlpha, 0.0, 1.0);
+          vec2 uvCurr = clamp(uv + uvDelta * (1.0 - effAlpha), 0.0, 1.0);
+          vec3 cPrev = texture(uTexPrev, uvPrev).rgb;
+          vec3 cCurr = texture(uTexCurr, uvCurr).rgb;
+          vec3 warpedBlend = mix(cPrev, cCurr, effAlpha);
+          vec3 nearestReal = effAlpha < 0.5 ? texture(uTexPrev, uv).rgb : texture(uTexCurr, uv).rgb;
+          float agree = clamp(1.0 - length(cPrev - cCurr) * 2.2, 0.0, 1.0) * conf;
+          return mix(nearestReal, warpedBlend, agree);
+        }
+
+        void main() {
+          vec3 e = sampleBase(vUv);
+          if (uEnabled < 0.5) {
+            fragColor = vec4(e, 1.0);
+            return;
+          }
+
+          vec3 b = sampleBase(vUv + vec2(0.0, -uTexel.y));
+          vec3 d = sampleBase(vUv + vec2(-uTexel.x, 0.0));
+          vec3 f = sampleBase(vUv + vec2(uTexel.x, 0.0));
+          vec3 h = sampleBase(vUv + vec2(0.0, uTexel.y));
+
+          if (uDeband > 0.001) {
+            float sigma = mix(0.0004, 0.0065, uDeband);
+            float invSigma = 1.0 / sigma;
+            vec3 db = b - e; float wb = exp(-dot(db, db) * invSigma);
+            vec3 dd = d - e; float wd = exp(-dot(dd, dd) * invSigma);
+            vec3 df = f - e; float wf = exp(-dot(df, df) * invSigma);
+            vec3 dh = h - e; float wh = exp(-dot(dh, dh) * invSigma);
+            float wSum = 1.0 + wb + wd + wf + wh;
+            vec3 soft = (e + b * wb + d * wd + f * wf + h * wh) / wSum;
+            e = mix(e, soft, 0.85 * uDeband);
+          }
+
+          vec3 color = e;
+          if (uSharpness > 0.001) {
+            vec3 mn = min(e, min(min(b, d), min(f, h)));
+            vec3 mx = max(e, max(max(b, d), max(f, h)));
+            vec3 rcpM = 1.0 / max(mx, vec3(0.0001));
+            vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) * rcpM, 0.0, 1.0));
+            float peak = -mix(0.0, 0.21, uSharpness);
+            vec3 w = amp * peak;
+            color = clamp((e + (b + d + f + h) * w) / (1.0 + 4.0 * w), 0.0, 1.0);
+          }
+
+          if (uContrast > 0.001) {
+            color = clamp((color - 0.5) * (1.0 + uContrast * 0.28) + 0.5, 0.0, 1.0);
+          }
+
+          if (uVibrance > 0.001) {
+            float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+            float maxC = max(color.r, max(color.g, color.b));
+            float minC = min(color.r, min(color.g, color.b));
+            float sat = maxC - minC;
+            color = clamp(mix(vec3(luma), color, 1.0 + uVibrance * 0.45 * (1.0 - sat)), 0.0, 1.0);
+          }
+
+          fragColor = vec4(color, 1.0);
+        }
+      `;
+
+      function compileShader(type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      }
+
+      function createProgram(vsSrc, fsSrc) {
+        const p = gl.createProgram();
+        const v = compileShader(gl.VERTEX_SHADER, vsSrc);
+        const f = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+        gl.attachShader(p, v);
+        gl.attachShader(p, f);
+        gl.linkProgram(p);
+        return p;
+      }
+
+      function createTex(filter) {
+        const t = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+        return t;
+      }
+
+      function createFboTarget(w, h, useHalfFloat = false, nearest = false) {
+        const tex = createTex(nearest ? gl.NEAREST : gl.LINEAR);
+        if (useHalfFloat) {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+        } else {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        }
+        const fbo = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return { tex, fbo, w, h, complete: status === gl.FRAMEBUFFER_COMPLETE };
+      }
+
+      function deleteFboTarget(target) {
+        if (!target) return;
+        if (target.fbo) gl.deleteFramebuffer(target.fbo);
+        if (target.tex) gl.deleteTexture(target.tex);
+      }
+
+      const extFloat = gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float");
+      let useHalfFloatFlow = false;
+      if (extFloat) {
+        const probe = createFboTarget(4, 4, true);
+        useHalfFloatFlow = probe.complete;
+        deleteFboTarget(probe);
+      }
+
+      const program = createProgram(vsScreen, fsSource);
+      const progLuma = createProgram(vsFbo, fsLuma);
+      const progDownsample = createProgram(vsFbo, fsDownsample);
+      const progMad = createProgram(vsFbo, fsMad);
+      const progCondCopy = createProgram(vsFbo, fsCondCopy);
+      const progOpticalFlow = createProgram(vsFbo, fsOpticalFlow);
+      const progFlowSmooth = createProgram(vsFbo, fsFlowSmooth);
+
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+
+      let texStaging = null;
+      let currFbo = null;
+      let prevFbo = null;
+
+      function ensureVideoFbos(w, h) {
+        if (currFbo && prevFbo && texStaging && allocVideoW === w && allocVideoH === h) return;
+        if (texStaging) gl.deleteTexture(texStaging);
+        deleteFboTarget(currFbo);
+        deleteFboTarget(prevFbo);
+        allocVideoW = w;
+        allocVideoH = h;
+
+        texStaging = createTex(gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        currFbo = createFboTarget(w, h, false);
+        prevFbo = createFboTarget(w, h, false);
+        hasCurr = false;
+        hasPrev = false;
+        hasPrevFlow = false;
+      }
+
+      ensureVideoFbos(srcW, srcH);
+
+      const L1_W = 400, L1_H = 225;
+      const L2_W = 200, L2_H = 112;
+      const L3_W = 100, L3_H = 56;
+
+      let currLuma = [createFboTarget(L1_W, L1_H), createFboTarget(L2_W, L2_H), createFboTarget(L3_W, L3_H)];
+      let prevLuma = [createFboTarget(L1_W, L1_H), createFboTarget(L2_W, L2_H), createFboTarget(L3_W, L3_H)];
+      let scratchLuma = [createFboTarget(L1_W, L1_H), createFboTarget(L2_W, L2_H), createFboTarget(L3_W, L3_H)];
+
+      let cadenceCurr = createFboTarget(1, 1, false, true);
+      let cadencePrev = createFboTarget(1, 1, false, true);
+      const madPbo = [gl.createBuffer(), gl.createBuffer()];
+      for (const pbo of madPbo) {
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, 4, gl.STREAM_READ);
+      }
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      const madSync = [null, null];
+      const madReadBuf = new Uint8Array(4);
+      let pboWriteIdx = 0;
+
+      const flowFwd3 = createFboTarget(L3_W, L3_H, useHalfFloatFlow);
+      const flowFwd2 = createFboTarget(L2_W, L2_H, useHalfFloatFlow);
+      const flowFwd1 = createFboTarget(L1_W, L1_H, useHalfFloatFlow);
+      const flowBwd3 = createFboTarget(L3_W, L3_H, useHalfFloatFlow);
+      const flowBwd2 = createFboTarget(L2_W, L2_H, useHalfFloatFlow);
+      const flowBwd1 = createFboTarget(L1_W, L1_H, useHalfFloatFlow);
+      let flowSmooth = createFboTarget(L1_W, L1_H, useHalfFloatFlow);
+      let prevFlowSmooth = createFboTarget(L1_W, L1_H, useHalfFloatFlow);
+
+      gl.useProgram(program);
+      const uTexPrev = gl.getUniformLocation(program, "uTexPrev");
+      const uTexCurr = gl.getUniformLocation(program, "uTexCurr");
+      const uTexFlow = gl.getUniformLocation(program, "uTexFlow");
+      const uTexCadence = gl.getUniformLocation(program, "uCadence");
+      const uTexel = gl.getUniformLocation(program, "uTexel");
+      const uEnabled = gl.getUniformLocation(program, "uEnabled");
+      const uSharpness = gl.getUniformLocation(program, "uSharpness");
+      const uDeband = gl.getUniformLocation(program, "uDeband");
+      const uContrast = gl.getUniformLocation(program, "uContrast");
+      const uVibrance = gl.getUniformLocation(program, "uVibrance");
+      const uFgMode = gl.getUniformLocation(program, "uFgMode");
+      const uFgAlpha = gl.getUniformLocation(program, "uFgAlpha");
+      const uSplit30 = gl.getUniformLocation(program, "uSplit30");
+      const uUseHalfFloat = gl.getUniformLocation(program, "uUseHalfFloat");
+      gl.uniform1i(uTexPrev, 0);
+      gl.uniform1i(uTexCurr, 1);
+      gl.uniform1i(uTexFlow, 2);
+      gl.uniform1i(uTexCadence, 3);
+
+      const locLumaSrc = gl.getUniformLocation(progLuma, "uSrc");
+      const locDownSrc = gl.getUniformLocation(progDownsample, "uSrc");
+      const locDownHalf = gl.getUniformLocation(progDownsample, "uHalfTexel");
+      const locMadNew = gl.getUniformLocation(progMad, "uNewLuma");
+      const locMadCurr = gl.getUniformLocation(progMad, "uCurrLuma");
+      const locMadPrevCad = gl.getUniformLocation(progMad, "uPrevCadence");
+      const locMadHasCurr = gl.getUniformLocation(progMad, "uHasCurr");
+      const locCopySrc = gl.getUniformLocation(progCondCopy, "uSrc");
+      const locCopyCadence = gl.getUniformLocation(progCondCopy, "uCadence");
+      const locCopyForce = gl.getUniformLocation(progCondCopy, "uForceCopy");
+      const locFlowCurr = gl.getUniformLocation(progOpticalFlow, "uCurr");
+      const locFlowPrev = gl.getUniformLocation(progOpticalFlow, "uPrev");
+      const locFlowCoarse = gl.getUniformLocation(progOpticalFlow, "uCoarseFlow");
+      const locFlowSize = gl.getUniformLocation(progOpticalFlow, "uLevelSize");
+      const locFlowStep = gl.getUniformLocation(progOpticalFlow, "uLevelStep");
+      const locFlowHasCoarse = gl.getUniformLocation(progOpticalFlow, "uHasCoarse");
+      const locFlowHalfFloat = gl.getUniformLocation(progOpticalFlow, "uUseHalfFloat");
+      const locFlowRadius = gl.getUniformLocation(progOpticalFlow, "uRadius");
+      const locSmoothFwd = gl.getUniformLocation(progFlowSmooth, "uFlowFwd");
+      const locSmoothBwd = gl.getUniformLocation(progFlowSmooth, "uFlowBwd");
+      const locSmoothGuide = gl.getUniformLocation(progFlowSmooth, "uGuide");
+      const locSmoothPrev = gl.getUniformLocation(progFlowSmooth, "uPrevFlow");
+      const locSmoothCadence = gl.getUniformLocation(progFlowSmooth, "uCadence");
+      const locSmoothInv = gl.getUniformLocation(progFlowSmooth, "uInvSize");
+      const locSmoothHalfFloat = gl.getUniformLocation(progFlowSmooth, "uUseHalfFloat");
+      const locSmoothHasPrev = gl.getUniformLocation(progFlowSmooth, "uHasPrevFlow");
+
+      function boostIsActive() {
+        return gpuBoost.enabled && (gpuBoost.sharpness > 0 || gpuBoost.deband > 0 || gpuBoost.contrast > 0 || gpuBoost.vibrance > 0);
+      }
+
+      function computeTargetBackingSize() {
+        if (!boostIsActive() && frameGen.mode === "off") return { w: srcW, h: srcH };
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const cssW = targetCanvas.clientWidth || srcW;
+        const cssH = targetCanvas.clientHeight || srcH;
+        const w = Math.min(3840, Math.max(srcW, Math.round(cssW * dpr)));
+        const h = Math.min(2160, Math.max(srcH, Math.round(cssH * dpr)));
+        return { w, h };
+      }
+
+      function ensureCanvasSize() {
+        const { w, h } = computeTargetBackingSize();
+        if (targetCanvas.width !== w || targetCanvas.height !== h) {
+          targetCanvas.width = w;
+          targetCanvas.height = h;
+        }
+      }
+
+      function drawFboQuad(target) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo);
+        gl.viewport(0, 0, target.w, target.h);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+
+      function uploadVideoToTexture(tex, frame) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        try {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, frame);
+        } catch {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, frame);
+        }
+      }
+
+      function buildLumaPyramid(sourceTex, pyramid) {
+        gl.bindVertexArray(vao);
+        gl.useProgram(progLuma);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, sourceTex);
+        gl.uniform1i(locLumaSrc, 0);
+        drawFboQuad(pyramid[0]);
+
+        gl.useProgram(progDownsample);
+        gl.uniform1i(locDownSrc, 0);
+        for (let i = 1; i < 3; i++) {
+          gl.bindTexture(gl.TEXTURE_2D, pyramid[i - 1].tex);
+          gl.uniform2f(locDownHalf, 0.5 / pyramid[i - 1].w, 0.5 / pyramid[i - 1].h);
+          drawFboQuad(pyramid[i]);
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      }
+
+      function copyIfUnique(srcTex, dstFbo, forceCopy) {
+        gl.useProgram(progCondCopy);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, srcTex);
+        gl.uniform1i(locCopySrc, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, cadenceCurr.tex);
+        gl.uniform1i(locCopyCadence, 1);
+        gl.uniform1f(locCopyForce, forceCopy ? 1.0 : 0.0);
+        drawFboQuad(dstFbo);
+      }
+
+      function pollPboSlot(idx) {
+        const sync = madSync[idx];
+        if (!sync) return;
+        const status = gl.clientWaitSync(sync, 0, 0);
+        if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
+          gl.deleteSync(sync);
+          madSync[idx] = null;
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, madPbo[idx]);
+          gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, madReadBuf);
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+          sceneCutActive = madReadBuf[2] >= 128;
+          const isDup = !sceneCutActive && madReadBuf[1] < 128;
+          const streak = Math.round((madReadBuf[3] / 255.0) * 8);
+          staticSceneActive = streak >= 2;
+
+          const isAltDup = isDup && !prevWasDup;
+          altDupWindow.push(isAltDup);
+          if (altDupWindow.length > 16) altDupWindow.shift();
+          const altCount = altDupWindow.reduce((acc, v) => acc + (v ? 1 : 0), 0);
+          detectedSourceFps = (altDupWindow.length >= 6 && altCount >= 3) ? 30 : 60;
+          prevWasDup = isDup;
+        } else if (status === gl.WAIT_FAILED) {
+          gl.deleteSync(sync);
+          madSync[idx] = null;
+        }
+      }
+
+      function pollCadencePbo() {
+        pollPboSlot(pboWriteIdx);
+        pollPboSlot(1 - pboWriteIdx);
+      }
+
+      function enqueueCadenceReadback() {
+        if (madSync[pboWriteIdx]) {
+          gl.deleteSync(madSync[pboWriteIdx]);
+          madSync[pboWriteIdx] = null;
+        }
+        gl.bindFramebuffer(gl.FRAMEBUFFER, cadenceCurr.fbo);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, madPbo[pboWriteIdx]);
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        madSync[pboWriteIdx] = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        pboWriteIdx = 1 - pboWriteIdx;
+      }
+
+      function dispatchFlowPyramid(currPyr, prevPyr, f3, f2, f1) {
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, currPyr[2].tex);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, prevPyr[2].tex);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, currPyr[2].tex);
+        gl.uniform2f(locFlowSize, L3_W, L3_H);
+        gl.uniform1f(locFlowStep, 12.8);
+        gl.uniform1f(locFlowHasCoarse, 0.0);
+        gl.uniform1i(locFlowRadius, 2);
+        drawFboQuad(f3);
+
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, currPyr[1].tex);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, prevPyr[1].tex);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, f3.tex);
+        gl.uniform2f(locFlowSize, L2_W, L2_H);
+        gl.uniform1f(locFlowStep, 6.4);
+        gl.uniform1f(locFlowHasCoarse, 1.0);
+        gl.uniform1i(locFlowRadius, 1);
+        drawFboQuad(f2);
+
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, currPyr[0].tex);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, prevPyr[0].tex);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, f2.tex);
+        gl.uniform2f(locFlowSize, L1_W, L1_H);
+        gl.uniform1f(locFlowStep, 3.2);
+        gl.uniform1f(locFlowHasCoarse, 1.0);
+        gl.uniform1i(locFlowRadius, 1);
+        drawFboQuad(f1);
+      }
+
+      function computeOpticalFlow() {
+        gl.bindVertexArray(vao);
+        gl.useProgram(progOpticalFlow);
+        gl.uniform1i(locFlowCurr, 0);
+        gl.uniform1i(locFlowPrev, 1);
+        gl.uniform1i(locFlowCoarse, 2);
+        gl.uniform1f(locFlowHalfFloat, useHalfFloatFlow ? 1.0 : 0.0);
+
+        dispatchFlowPyramid(currLuma, prevLuma, flowFwd3, flowFwd2, flowFwd1);
+        dispatchFlowPyramid(prevLuma, currLuma, flowBwd3, flowBwd2, flowBwd1);
+
+        if (hasPrevFlow) {
+          [flowSmooth, prevFlowSmooth] = [prevFlowSmooth, flowSmooth];
+        }
+
+        gl.useProgram(progFlowSmooth);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, flowFwd1.tex);
+        gl.uniform1i(locSmoothFwd, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, flowBwd1.tex);
+        gl.uniform1i(locSmoothBwd, 1);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, currLuma[0].tex);
+        gl.uniform1i(locSmoothGuide, 2);
+        gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, prevFlowSmooth.tex);
+        gl.uniform1i(locSmoothPrev, 3);
+        gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, cadenceCurr.tex);
+        gl.uniform1i(locSmoothCadence, 4);
+        gl.uniform2f(locSmoothInv, 1.0 / L1_W, 1.0 / L1_H);
+        gl.uniform1f(locSmoothHalfFloat, useHalfFloatFlow ? 1.0 : 0.0);
+        gl.uniform1f(locSmoothHasPrev, hasPrevFlow ? 1.0 : 0.0);
+        drawFboQuad(flowSmooth);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        hasPrevFlow = true;
+      }
+
+      function renderToCanvas(fgModeInt, alpha) {
+        if (!hasCurr || !currFbo) return;
+        ensureCanvasSize();
+        const cw = targetCanvas.width;
+        const ch = targetCanvas.height;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        const srcAspect = srcW / Math.max(1, srcH);
+        const dstAspect = cw / Math.max(1, ch);
+        let vpW = cw, vpH = ch, vpX = 0, vpY = 0;
+        if (dstAspect > srcAspect) {
+          vpH = ch;
+          vpW = Math.round(ch * srcAspect);
+          vpX = Math.floor((cw - vpW) / 2);
+        } else {
+          vpW = cw;
+          vpH = Math.round(cw / srcAspect);
+          vpY = Math.floor((ch - vpH) / 2);
+        }
+        if (vpX > 0 || vpY > 0 || vpW < cw || vpH < ch) {
+          gl.viewport(0, 0, cw, ch);
+          gl.clearColor(0, 0, 0, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+        gl.viewport(vpX, vpY, vpW, vpH);
+
+        gl.useProgram(program);
+        gl.bindVertexArray(vao);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, (hasPrev && prevFbo) ? prevFbo.tex : currFbo.tex);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, currFbo.tex);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, flowSmooth.tex);
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, cadenceCurr.tex);
+        gl.uniform2f(uTexel, 1 / Math.max(1, srcW), 1 / Math.max(1, srcH));
+        gl.uniform1f(uEnabled, boostIsActive() ? 1 : 0);
+        gl.uniform1f(uSharpness, gpuBoost.sharpness / 100);
+        gl.uniform1f(uDeband, gpuBoost.deband / 100);
+        gl.uniform1f(uContrast, gpuBoost.contrast / 100);
+        gl.uniform1f(uVibrance, gpuBoost.vibrance / 100);
+        gl.uniform1i(uFgMode, fgModeInt);
+        gl.uniform1f(uFgAlpha, alpha);
+        gl.uniform1f(uSplit30, detectedSourceFps <= 30 ? 1.0 : 0.0);
+        gl.uniform1f(uUseHalfFloat, useHalfFloatFlow ? 1.0 : 0.0);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        needsRedraw = false;
+      }
+
+      function updateFgStatusLabel() {
+        if (frameGen.mode === "off") {
+          fgStatusText = frameGen.vsync ? "Frame Gen desligado (VSync)" : "Frame Gen desligado (Sem VSync)";
+        } else if (recentDecodedFps < 24) {
+          fgStatusText = `Passthrough (${recentDecodedFps} fps recebidos)`;
+        } else if (staticSceneActive) {
+          fgStatusText = "Cena estática (passthrough)";
+        } else if (detectedSourceFps >= 60 && measuredDisplayHz < 95) {
+          fgStatusText = `Passthrough (${Math.round(measuredDisplayHz)} Hz · jogo já a 60 fps)`;
+        } else {
+          const target = detectedSourceFps <= 30 ? 60 : Math.round(measuredDisplayHz);
+          const name = frameGen.mode === "extrapolation" ? "Baixa Latência" : "Suave 2×";
+          const syncTag = frameGen.vsync ? "VSync" : "Sem VSync";
+          fgStatusText = `${name} · ${detectedSourceFps}→${target} fps (${syncTag})`;
+        }
+        if (fgStatusNote) fgStatusNote.textContent = fgStatusText;
+      }
+
+      function canRunFrameGen() {
+        return frameGen.mode !== "off"
+          && hasCurr
+          && hasPrev
+          && !staticSceneActive
+          && !sceneCutActive
+          && recentDecodedFps >= 24
+          && (detectedSourceFps <= 30 || measuredDisplayHz >= 95);
+      }
+
+      function ingestVideoFrame(frame, nowMs) {
+        try {
+          const w = frame.displayWidth || srcW;
+          const h = frame.displayHeight || srcH;
+          srcW = w; srcH = h;
+          ensureVideoFbos(w, h);
+
+          if (slotStartMs > 0) {
+            const dt = nowMs - slotStartMs;
+            if (dt >= 6 && dt <= 40) avgSlotIntervalMs = avgSlotIntervalMs * 0.8 + dt * 0.2;
+          }
+          slotStartMs = nowMs;
+          lastSlotAlpha = 0;
+          generatedThisInterval = false;
+
+          if (frameGen.mode === "off") {
+            uploadVideoToTexture(currFbo.tex, frame);
+            hasCurr = true;
+            return;
+          }
+
+          pollCadencePbo();
+          uploadVideoToTexture(texStaging, frame);
+          buildLumaPyramid(texStaging, scratchLuma);
+
+          [cadenceCurr, cadencePrev] = [cadencePrev, cadenceCurr];
+          gl.bindVertexArray(vao);
+          gl.useProgram(progMad);
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scratchLuma[2].tex);
+          gl.uniform1i(locMadNew, 0);
+          gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, currLuma[2].tex);
+          gl.uniform1i(locMadCurr, 1);
+          gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, cadencePrev.tex);
+          gl.uniform1i(locMadPrevCad, 2);
+          gl.uniform1f(locMadHasCurr, hasCurr ? 1.0 : 0.0);
+          drawFboQuad(cadenceCurr);
+          enqueueCadenceReadback();
+
+          const wasFirst = !hasCurr;
+          copyIfUnique(currFbo.tex, prevFbo, false);
+          copyIfUnique(texStaging, currFbo, wasFirst);
+          for (let i = 0; i < 3; i++) {
+            copyIfUnique(currLuma[i].tex, prevLuma[i], false);
+            copyIfUnique(scratchLuma[i].tex, currLuma[i], wasFirst);
+          }
+
+          if (wasFirst) {
+            hasCurr = true;
+            return;
+          }
+
+          hasPrev = true;
+          if (detectedSourceFps <= 30 || measuredDisplayHz >= 95) {
+            computeOpticalFlow();
+          }
+        } finally {
+          closeVideoFrameSafe(frame);
+        }
+      }
+
+      function rafTick(nowMs) {
+        rafHandle = 0;
+        const wantRaf = streamView.classList.contains("active") && (frameGen.vsync || frameGen.mode !== "off");
+        if (!wantRaf) return;
+
+        if (lastRafMs > 0) {
+          const dt = nowMs - lastRafMs;
+          if (dt >= 3 && dt <= 50) {
+            const hz = 1000 / dt;
+            measuredDisplayHz = measuredDisplayHz * 0.85 + hz * 0.15;
+          }
+        }
+        lastRafMs = nowMs;
+
+        if (frameGen.mode !== "off") {
+          pollCadencePbo();
+        }
+
+        let ingestedThisTick = false;
+        if (pendingFrame) {
+          const f = pendingFrame;
+          pendingFrame = null;
+          ingestVideoFrame(f, nowMs);
+          ingestedThisTick = true;
+        }
+
+        const canGenerate = canRunFrameGen();
+        const modeInt = frameGen.mode === "extrapolation" ? 1 : 2;
+
+        if (frameGen.vsync) {
+          if (hasCurr) {
+            if (!canGenerate) {
+              if (ingestedThisTick || needsRedraw) {
+                renderToCanvas(0, 0);
+                if (ingestedThisTick) fpsCounter++;
+              }
+            } else if (measuredDisplayHz < 95) {
+              if (ingestedThisTick) {
+                renderToCanvas(modeInt, 0.0);
+                fpsCounter++;
+              } else if (needsRedraw) {
+                renderToCanvas(0, 0);
+              }
+            } else {
+              if (ingestedThisTick) {
+                lastSlotAlpha = 0;
+                renderToCanvas(modeInt, 0.0);
+                fpsCounter++;
+              } else {
+                const elapsed = Math.max(0, nowMs - slotStartMs);
+                const interval = Math.max(8, avgSlotIntervalMs);
+                if (elapsed <= interval * 1.4) {
+                  const rawAlpha = Math.max(0.05, Math.min(0.92, elapsed / interval));
+                  const alpha = Math.max(lastSlotAlpha, rawAlpha);
+                  lastSlotAlpha = alpha;
+                  renderToCanvas(modeInt, alpha);
+                  fpsCounter++;
+                } else if (needsRedraw) {
+                  renderToCanvas(0, 0);
+                }
+              }
+            }
+          }
+        } else if (!generatedThisInterval && canGenerate && measuredDisplayHz >= 95) {
+          const elapsed = nowMs - slotStartMs;
+          if (elapsed > 4.0 && elapsed < Math.max(8, avgSlotIntervalMs) * 1.15) {
+            const alpha = Math.max(0.15, Math.min(0.90, elapsed / Math.max(8, avgSlotIntervalMs)));
+            renderToCanvas(modeInt, alpha);
+            generatedThisInterval = true;
+            fpsCounter++;
+          }
+        }
+
+        updateFgStatusLabel();
+        if (streamView.classList.contains("active") && (frameGen.vsync || frameGen.mode !== "off")) {
+          rafHandle = requestAnimationFrame(rafTick);
+        }
+      }
+
+      function startRafIfNeeded() {
+        if (!rafHandle && streamView.classList.contains("active") && (frameGen.vsync || frameGen.mode !== "off")) {
+          lastRafMs = 0;
+          rafHandle = requestAnimationFrame(rafTick);
+        }
+      }
+
+      return {
+        isWebGl2: true,
+        getFrameGenStatus: () => fgStatusText,
+        setDecodedFps(fps) {
+          recentDecodedFps = fps;
+          updateFgStatusLabel();
+        },
+        setRenderActive(active) {
+          if (active) {
+            if (!frameGen.vsync && pendingFrame) {
+              const f = pendingFrame;
+              pendingFrame = null;
+              this.submitFrame(f);
+            }
+            if (frameGen.vsync || frameGen.mode !== "off") {
+              startRafIfNeeded();
+            } else if (rafHandle) {
+              cancelAnimationFrame(rafHandle);
+              rafHandle = 0;
+            }
+          } else {
+            if (rafHandle) { cancelAnimationFrame(rafHandle); rafHandle = 0; }
+            if (pendingFrame) {
+              closeVideoFrameSafe(pendingFrame);
+              pendingFrame = null;
+            }
+          }
+          updateFgStatusLabel();
+        },
+        setSourceSize(w, h) {
+          if (w > 0 && h > 0) { srcW = w; srcH = h; }
+        },
+        resize() {
+          ensureCanvasSize();
+          if (hasCurr) {
+            needsRedraw = true;
+            if (!frameGen.vsync || !rafHandle) renderToCanvas(0, 0);
+          }
+        },
+        clearFrame() {
+          if (pendingFrame) {
+            closeVideoFrameSafe(pendingFrame);
+            pendingFrame = null;
+          }
+          for (let i = 0; i < 2; i++) {
+            if (madSync[i]) {
+              gl.deleteSync(madSync[i]);
+              madSync[i] = null;
+            }
+          }
+          hasCurr = false;
+          hasPrev = false;
+          hasPrevFlow = false;
+          altDupWindow = [];
+          prevWasDup = false;
+          staticSceneActive = false;
+          sceneCutActive = false;
+          generatedThisInterval = false;
+          slotStartMs = 0;
+          lastSlotAlpha = 0;
+          recentDecodedFps = 60;
+          needsRedraw = false;
+          if (rafHandle) { cancelAnimationFrame(rafHandle); rafHandle = 0; }
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.viewport(0, 0, targetCanvas.width, targetCanvas.height);
+          gl.clearColor(0, 0, 0, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        },
+        submitFrame(frame) {
+          const w = frame.displayWidth || srcW;
+          const h = frame.displayHeight || srcH;
+          srcW = w; srcH = h;
+
+          if (frameGen.vsync) {
+            if (pendingFrame) closeVideoFrameSafe(pendingFrame);
+            pendingFrame = frame;
+            startRafIfNeeded();
+            return false;
+          }
+
+          const nowMs = performance.now();
+          ingestVideoFrame(frame, nowMs);
+          if (frameGen.mode === "off") {
+            renderToCanvas(0, 0);
+            return true;
+          }
+
+          startRafIfNeeded();
+          const modeInt = frameGen.mode === "extrapolation" ? 1 : 2;
+          renderToCanvas(canRunFrameGen() ? modeInt : 0, 0.0);
+          updateFgStatusLabel();
+          return true;
+        },
+        redraw() {
+          if (hasCurr) {
+            needsRedraw = true;
+            if (!frameGen.vsync || !rafHandle) renderToCanvas(0, 0);
+          }
+        }
+      };
+    }
+
+    const renderer = createVideoRenderer(canvas);
+    if (!renderer.isWebGl2 && gpuBoostBackendNote) {
+      gpuBoostBackendNote.textContent = "WebGL2 indisponível neste navegador — exibindo modo compatibilidade 2D.";
+    }
+
+    function parseSelectedQuality() {
+      if (qualitySelectEl.value === "custom") {
+        const [w, h] = (customResEl.value || "1920x1080").split("x");
+        const fps = parseInt(customFpsEl.value, 10) || 60;
+        const mbps = parseInt(customBitrateEl.value, 10) || 25;
+        return {
+          width: parseInt(w, 10) || 1920,
+          height: parseInt(h, 10) || 1080,
+          fps,
+          bitrateKbps: mbps * 1000,
+          adaptiveBitrate: Boolean(customAdaptiveEl.checked)
+        };
+      }
+      const val = qualitySelectEl.value || "1920x1080@60:12000";
+      const [resFps, br, mode] = val.split(":");
+      const [res, fps] = resFps.split("@");
+      const [w, h] = res.split("x");
+      return {
+        width: parseInt(w, 10) || 1920,
+        height: parseInt(h, 10) || 1080,
+        fps: parseInt(fps, 10) || 60,
+        bitrateKbps: parseInt(br, 10) || 12000,
+        adaptiveBitrate: mode === "adaptive"
+      };
+    }
+
+    const GPU_BOOST_PRESETS = {
+      soft: { enabled: true, sharpness: 35, deband: 15, contrast: 8, vibrance: 12 },
+      balanced: { enabled: true, sharpness: 65, deband: 25, contrast: 15, vibrance: 20 },
+      max: { enabled: true, sharpness: 100, deband: 40, contrast: 25, vibrance: 32 }
+    };
+
+    function saveAndSyncGpuBoost() {
+      try { localStorage.setItem("cord_gpu_boost", JSON.stringify(gpuBoost)); } catch {}
+      const on = gpuBoost.enabled && renderer.isWebGl2;
+      const activeText = on ? `Ligado (${gpuBoost.sharpness}%)` : "Desligado";
+
+      lobbyBoostToggle.textContent = on ? "Ligado" : "Desligado";
+      lobbyBoostToggle.classList.toggle("active", on);
+      hudBoostToggle.textContent = on ? "Ligado" : "Desligado";
+      hudBoostToggle.classList.toggle("active", on);
+      gpuBoostBtn.textContent = on ? `GPU Boost: ${gpuBoost.sharpness}%` : "GPU Boost: OFF";
+      gpuBoostBtn.classList.toggle("active", on);
+
+      if (!renderer.isWebGl2) {
+        lobbyBoostToggle.disabled = true;
+        hudBoostToggle.disabled = true;
+      }
+
+      if (on) {
+        cornerBoostEl.style.display = "inline";
+        cornerBoostEl.textContent = `· GPU ${gpuBoost.sharpness}%`;
+      } else {
+        cornerBoostEl.style.display = "none";
+      }
+
+      const pairs = [
+        ["Sharp", "sharpness"],
+        ["Deband", "deband"],
+        ["Contrast", "contrast"],
+        ["Vibrance", "vibrance"]
+      ];
+      for (const [suffix, key] of pairs) {
+        const val = gpuBoost[key];
+        const lSlider = document.getElementById(`lobby${suffix}`);
+        const lLabel = document.getElementById(`lobby${suffix}Val`);
+        const hSlider = document.getElementById(`hud${suffix}`);
+        const hLabel = document.getElementById(`hud${suffix}Val`);
+        if (lSlider) lSlider.value = String(val);
+        if (lLabel) lLabel.textContent = `${val}%`;
+        if (hSlider) hSlider.value = String(val);
+        if (hLabel) hLabel.textContent = `${val}%`;
+      }
+
+      const matchedPreset = !gpuBoost.enabled
+        ? "off"
+        : Object.keys(GPU_BOOST_PRESETS).find((k) => {
+            const p = GPU_BOOST_PRESETS[k];
+            return p.sharpness === gpuBoost.sharpness && p.deband === gpuBoost.deband
+              && p.contrast === gpuBoost.contrast && p.vibrance === gpuBoost.vibrance;
+          }) || "";
+
+      for (const btn of document.querySelectorAll("[data-boost-preset]")) {
+        btn.classList.toggle("active", btn.getAttribute("data-boost-preset") === matchedPreset);
+      }
+      gpuBoostBtn.title = `GPU Boost: ${activeText}`;
+      renderer.redraw();
+    }
+
+    let inputPollTimer = 0;
+
+    function restartInputLoop() {
+      if (inputPollTimer) clearInterval(inputPollTimer);
+      inputPollTimer = setInterval(inputTick, frameGen.lowLatency ? 4 : 16);
+    }
+
+    function saveAndSyncFrameGen() {
+      try {
+        localStorage.setItem("cord_frame_gen", frameGen.mode);
+        localStorage.setItem("cord_low_latency", frameGen.lowLatency ? "1" : "0");
+        localStorage.setItem("cord_vsync", frameGen.vsync ? "1" : "0");
+      } catch {}
+
+      const fgActive = frameGen.mode !== "off" && renderer.isWebGl2;
+      const modeLabel = frameGen.mode === "extrapolation"
+        ? "Baixa Latência"
+        : frameGen.mode === "interpolation"
+          ? "Suave 2×"
+          : "OFF";
+
+      frameGenBtn.textContent = `Frame Gen: ${modeLabel}`;
+      frameGenBtn.classList.toggle("active", fgActive);
+      frameGenBtn.disabled = !renderer.isWebGl2;
+
+      for (const btn of document.querySelectorAll("[data-fg-mode]")) {
+        btn.classList.toggle("active", btn.getAttribute("data-fg-mode") === frameGen.mode);
+        if (!renderer.isWebGl2 && btn.getAttribute("data-fg-mode") !== "off") btn.disabled = true;
+      }
+
+      const llLabel = frameGen.lowLatency ? "250 Hz: Ligado" : "250 Hz: Desligado";
+      lobbyLowLatencyToggle.textContent = llLabel;
+      lobbyLowLatencyToggle.classList.toggle("active", frameGen.lowLatency);
+      hudLowLatencyToggle.textContent = llLabel;
+      hudLowLatencyToggle.classList.toggle("active", frameGen.lowLatency);
+
+      const vsyncLabel = frameGen.vsync ? "VSync: Ligado" : "VSync: Desligado";
+      lobbyVsyncToggle.textContent = vsyncLabel;
+      lobbyVsyncToggle.classList.toggle("active", frameGen.vsync);
+      hudVsyncToggle.textContent = vsyncLabel;
+      hudVsyncToggle.classList.toggle("active", frameGen.vsync);
+
+      const showVsyncWarn = fgActive && !frameGen.vsync;
+      lobbyVsyncWarn.style.display = showVsyncWarn ? "block" : "none";
+      hudVsyncWarn.style.display = showVsyncWarn ? "block" : "none";
+
+      if (fgActive) {
+        cornerFgEl.style.display = "inline";
+        cornerFgEl.textContent = frameGen.mode === "extrapolation" ? "· FG Lat." : "· FG 2×";
+      } else {
+        cornerFgEl.style.display = "none";
+      }
+
+      renderer.setRenderActive(streamView.classList.contains("active"));
+      restartInputLoop();
+    }
+
+    function cycleFrameGenMode(showBanner = false) {
+      if (!renderer.isWebGl2) return;
+      frameGen.mode = frameGen.mode === "off"
+        ? "extrapolation"
+        : frameGen.mode === "extrapolation"
+          ? "interpolation"
+          : "off";
+      saveAndSyncFrameGen();
+      if (showBanner) {
+        const msg = frameGen.mode === "extrapolation"
+          ? "Frame Gen: Baixa Latência (Extrapolação)"
+          : frameGen.mode === "interpolation"
+            ? "Frame Gen: Suave 2× (Interpolação)"
+            : "Frame Gen: Desligado";
+        showStreamBanner(msg, 2200);
+      }
+    }
+
+    function wireGpuBoostControls() {
+      const toggleFn = () => {
+        if (!renderer.isWebGl2) return;
+        gpuBoost.enabled = !gpuBoost.enabled;
+        if (gpuBoost.enabled && gpuBoost.sharpness === 0 && gpuBoost.deband === 0 && gpuBoost.contrast === 0 && gpuBoost.vibrance === 0) {
+          Object.assign(gpuBoost, GPU_BOOST_PRESETS.balanced);
+        }
+        saveAndSyncGpuBoost();
+      };
+      lobbyBoostToggle.addEventListener("click", toggleFn);
+      hudBoostToggle.addEventListener("click", toggleFn);
+
+      for (const btn of document.querySelectorAll("[data-boost-preset]")) {
+        btn.addEventListener("click", () => {
+          const preset = btn.getAttribute("data-boost-preset");
+          if (preset === "off") {
+            gpuBoost.enabled = false;
+          } else if (GPU_BOOST_PRESETS[preset]) {
+            Object.assign(gpuBoost, GPU_BOOST_PRESETS[preset]);
+          }
+          saveAndSyncGpuBoost();
+        });
+      }
+
+      const fields = [
+        ["Sharp", "sharpness"],
+        ["Deband", "deband"],
+        ["Contrast", "contrast"],
+        ["Vibrance", "vibrance"]
+      ];
+      for (const [suffix, key] of fields) {
+        for (const prefix of ["lobby", "hud"]) {
+          const el = document.getElementById(`${prefix}${suffix}`);
+          if (!el) continue;
+          el.addEventListener("input", () => {
+            gpuBoost[key] = clampPct(el.value, gpuBoost[key]);
+            if (gpuBoost[key] > 0 && !gpuBoost.enabled && renderer.isWebGl2) {
+              gpuBoost.enabled = true;
+            }
+            saveAndSyncGpuBoost();
+          });
+        }
+      }
+
+      gpuBoostBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        gpuBoostPopover.classList.toggle("open");
+        wakeHud();
+      });
+      hudBoostClose.addEventListener("click", () => gpuBoostPopover.classList.remove("open"));
+      gpuBoostPopover.addEventListener("pointerdown", (e) => e.stopPropagation());
+      gpuBoostPopover.addEventListener("click", (e) => { e.stopPropagation(); wakeHud(); });
+
+      for (const btn of document.querySelectorAll("[data-fg-mode]")) {
+        btn.addEventListener("click", () => {
+          if (!renderer.isWebGl2) return;
+          frameGen.mode = btn.getAttribute("data-fg-mode") || "off";
+          saveAndSyncFrameGen();
+        });
+      }
+
+      const toggleLowLatency = () => {
+        frameGen.lowLatency = !frameGen.lowLatency;
+        saveAndSyncFrameGen();
+      };
+      lobbyLowLatencyToggle.addEventListener("click", toggleLowLatency);
+      hudLowLatencyToggle.addEventListener("click", toggleLowLatency);
+
+      const toggleVsync = () => {
+        frameGen.vsync = !frameGen.vsync;
+        saveAndSyncFrameGen();
+        if (frameGen.mode !== "off" && !frameGen.vsync && streamView.classList.contains("active")) {
+          showStreamBanner("⚠ VSync desativado: o Frame Gen funciona melhor e mais liso com VSync ligado.", 3500);
+        }
+      };
+      lobbyVsyncToggle.addEventListener("click", toggleVsync);
+      hudVsyncToggle.addEventListener("click", toggleVsync);
+      frameGenBtn.addEventListener("click", () => cycleFrameGenMode(true));
+
+      saveAndSyncGpuBoost();
+      saveAndSyncFrameGen();
+    }
+    wireGpuBoostControls();
+
+    function updateCooldownUi() {
+      const now = Date.now();
+      const remainingMs = cooldownEndsAt - now;
+      if (remainingMs > 0) {
+        const sec = Math.ceil(remainingMs / 1000);
+        const pct = Math.max(0, Math.min(100, ((5000 - remainingMs) / 5000) * 100));
+        cooldownBoxEl.className = "cooldown-box";
+        cooldownBoxEl.style.display = "block";
+        cooldownTextEl.textContent = `PS5 encerrando sessão anterior — pronto para conectar em ${sec}s. (Você já pode clicar em Conectar que ele entra assim que zerar.)`;
+        cooldownFillEl.style.width = `${pct}%`;
+        cooldownReadyUntil = now + 2500;
+      } else if (cooldownEndsAt > 0 && now < cooldownReadyUntil) {
+        cooldownBoxEl.className = "cooldown-box ready";
+        cooldownBoxEl.style.display = "block";
+        cooldownTextEl.textContent = "PS5 pronto para conectar!";
+        cooldownFillEl.style.width = "100%";
+      } else {
+        cooldownEndsAt = 0;
+        cooldownBoxEl.style.display = "none";
+      }
+    }
+
+    function updateNetworkRecommendation() {
+      let avgPing = null;
+      let jitter = 0;
+      if (rttSamples.length > 0) {
+        avgPing = Math.round(rttSamples.reduce((a, b) => a + b, 0) / rttSamples.length);
+        if (rttSamples.length > 1) {
+          let diffSum = 0;
+          for (let i = 1; i < rttSamples.length; i++) diffSum += Math.abs(rttSamples[i] - rttSamples[i - 1]);
+          jitter = Math.round(diffSum / (rttSamples.length - 1));
+        }
+        netPingValueEl.textContent = `${avgPing} ms (±${jitter})`;
+      }
+      if (measuredMbps === null) return;
+
+      let safeMbps = measuredMbps * 0.65;
+      if (avgPing !== null && avgPing > 85) safeMbps *= 0.8;
+      if (jitter > 25) safeMbps *= 0.85;
+
+      let width = 1920, height = 1080, fps = 60, bitrateMbps = 12;
+      if (safeMbps >= 22) {
+        width = 1920; height = 1080; fps = 60; bitrateMbps = Math.min(50, Math.round(safeMbps));
+      } else if (safeMbps >= 11) {
+        width = 1920; height = 1080; fps = 60; bitrateMbps = Math.max(10, Math.round(safeMbps));
+      } else if (safeMbps >= 6) {
+        width = 1280; height = 720; fps = 60; bitrateMbps = Math.max(6, Math.round(safeMbps));
+      } else {
+        width = 1280; height = 720; fps = 30; bitrateMbps = Math.max(3, Math.round(safeMbps));
+      }
+
+      recommendedQuality = { width, height, fps, bitrateMbps };
+      netRecTextEl.innerHTML = `Ideal sugerido: <strong>${height}p · ${fps} fps · ${bitrateMbps} Mbps</strong> (informativo — escolha o que preferir)`;
+      applyRecBtn.style.display = "inline-block";
+    }
+
+    async function runSpeedTest() {
+      if (!isApproved || speedTestRunning || streamView.classList.contains("active")) return;
+      speedTestRunning = true;
+      speedTestBtn.disabled = true;
+      netSpeedValueEl.textContent = "Medindo...";
+      try {
+        const res = await fetch(apiUrl("/api/speedtest?kb=2048"), { cache: "no-store" });
+        if (!res.ok) throw new Error("http");
+        const t0 = performance.now();
+        const buf = await res.arrayBuffer();
+        const elapsedSec = Math.max(0.01, (performance.now() - t0) / 1000);
+        measuredMbps = (buf.byteLength * 8) / (elapsedSec * 1_000_000);
+        netSpeedValueEl.textContent = `${measuredMbps.toFixed(1)} Mbps`;
+        updateNetworkRecommendation();
+      } catch {
+        netSpeedValueEl.textContent = "Falha ao medir";
+      } finally {
+        speedTestRunning = false;
+        speedTestBtn.disabled = false;
+      }
+    }
+
+    applyRecBtn.addEventListener("click", () => {
+      if (!recommendedQuality) return;
+      qualitySelectEl.value = "custom";
+      customResEl.value = `${recommendedQuality.width}x${recommendedQuality.height}`;
+      customFpsEl.value = String(recommendedQuality.fps);
+      customBitrateEl.value = String(Math.max(2, Math.min(100, recommendedQuality.bitrateMbps)));
+      syncCustomPanel();
+    });
+    speedTestBtn.addEventListener("click", runSpeedTest);
+
+    function buildMemberRow(member, compact) {
+      const row = document.createElement("div");
+      row.className = compact ? "party-row" : "member-row";
+
+      const left = document.createElement("div");
+      left.className = "member-left";
+
+      const avatar = document.createElement("div");
+      avatar.className = `avatar${member.hasControl ? " controlling" : ""}`;
+      avatar.style.background = avatarColor(member.name);
+      avatar.textContent = (member.name[0] || "?").toUpperCase();
+
+      const meta = document.createElement("div");
+      meta.className = "member-meta";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "member-name";
+      const isMe = myClientId !== null && member.id === myClientId;
+      nameEl.textContent = isMe ? `${member.name} (você)` : member.name;
+
+      const roleEl = document.createElement("div");
+      roleEl.className = `member-role${member.hasControl ? " playing" : ""}`;
+      roleEl.textContent = member.hasControl
+        ? (latestStatus?.controllerAllowed === false ? "Com controle (travado)" : "Com controle")
+        : "Assistindo";
+
+      meta.appendChild(nameEl);
+      meta.appendChild(roleEl);
+      left.appendChild(avatar);
+      left.appendChild(meta);
+      row.appendChild(left);
+
+      if (!isMe && isController()) {
+        const passBtn = document.createElement("button");
+        passBtn.type = "button";
+        passBtn.className = "btn-accent-soft";
+        passBtn.textContent = "Passar";
+        passBtn.title = `Passar controle para ${member.name}`;
+        passBtn.addEventListener("click", () => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            sendIdleInput();
+            ws.send(JSON.stringify({ type: "passControl", targetId: member.id }));
+          }
+        });
+        row.appendChild(passBtn);
+      }
+
+      return row;
+    }
+
+    function renderMembers(status) {
+      const members = Array.isArray(status.members) ? status.members : [];
+      const count = members.length;
+      lobbyRoomCountEl.textContent = `${count} pessoa${count === 1 ? "" : "s"}`;
+      partyTitleEl.textContent = `SALA · ${count}`;
+
+      lobbyMemberListEl.innerHTML = "";
+      partyListEl.innerHTML = "";
+      if (count === 0) {
+        const empty = document.createElement("div");
+        empty.className = "muted-note";
+        empty.textContent = "Aguardando jogadores entrarem na sala...";
+        lobbyMemberListEl.appendChild(empty);
+      } else {
+        for (const m of members) {
+          lobbyMemberListEl.appendChild(buildMemberRow(m, false));
+          partyListEl.appendChild(buildMemberRow(m, true));
+        }
+      }
+
+      const me = members.find(m => m.id === myClientId);
+      if (me) psUnlocked = Boolean(me.psButtonUnlocked);
+
+      const controlling = isController();
+      const psLockedForMe = Boolean(status.psButtonLocked) && !psUnlocked;
+      unlockPsBtn.style.display = (controlling && psLockedForMe) ? "inline-block" : "none";
+      psBtn.style.display = controlling && !psLockedForMe ? "inline-block" : "none";
+      psBtn.disabled = !controlling || psLockedForMe;
+
+      const canRest = controlling && Boolean(status.allowRemoteRestMode) && status.consoleState === "Ready";
+      restHudBtn.style.display = canRest ? "inline-block" : "none";
+      restLobbyBtn.style.display = canRest ? "block" : "none";
+
+      clipBtn.style.display = (status.streamState === "Streaming" || status.streamState === 3) ? "inline-block" : "none";
+      clipBtn.style.opacity = status.canSaveClip ? "" : "0.65";
+      clipBtn.title = status.canSaveClip
+        ? "Salvar últimos 30s no host"
+        : "Aguardando próximo keyframe no host...";
+
+      stopBtn.style.display = controlling ? "inline-block" : "none";
+
+      if (!controlling) {
+        cornerRoleEl.textContent = status.controllerAllowed === false ? "Controle travado pelo dono" : "Assistindo (somente leitura)";
+        cornerRoleEl.className = "corner-role spectator";
+        if (document.pointerLockElement === canvas) document.exitPointerLock();
+      } else {
+        cornerRoleEl.textContent = psLockedForMe ? "Jogando (PS travado)" : "Jogando";
+        cornerRoleEl.className = "corner-role";
+      }
+    }
+
+    partyToggleBtn.addEventListener("click", () => {
+      const collapsed = partyOverlayEl.classList.toggle("collapsed");
+      partyToggleBtn.textContent = collapsed ? "Abrir" : "—";
+    });
+
+    function updateStatusUi(status) {
+      latestStatus = status;
+      dailyPassField.style.display = status.requireDailyPassword ? "block" : "none";
+      consoleNameEl.textContent = status.consoleName || "PlayStation 5";
+      showLobbyError(status.error || "");
+
+      if (typeof status.cooldownSeconds === "number" && status.cooldownSeconds > 0) {
+        const target = Date.now() + status.cooldownSeconds * 1000;
+        if (Math.abs(target - cooldownEndsAt) > 1200) cooldownEndsAt = target;
+      } else if (status.cooldownSeconds === 0 && (status.streamState === "Streaming" || status.streamState === 3)) {
+        cooldownEndsAt = 0;
+      }
+      updateCooldownUi();
+      renderMembers(status);
+
+      let stateClass = "offline";
+      let text = "Desconectado";
+      let btnText = "Ligar PS5 e Jogar";
+      let busy = false;
+      let streaming = false;
+
+      if (status.streamState === "Waking" || status.streamState === 1) {
+        stateClass = "busy";
+        text = status.statusDetail || "Acordando o PS5 do modo repouso...";
+        btnText = "Acordando PS5...";
+        busy = true;
+      } else if (status.streamState === "Connecting" || status.streamState === 2) {
+        stateClass = "busy";
+        text = status.statusDetail || "Conectando ao PS5...";
+        btnText = "Conectando...";
+        busy = true;
+      } else if (status.streamState === "Streaming" || status.streamState === 3) {
+        stateClass = "ready";
+        const appInfo = status.runningApp ? ` · ${status.runningApp}` : "";
+        text = `Transmitindo (${status.clientCount || 0} conectado${status.clientCount === 1 ? "" : "s"})${appInfo}`;
+        btnText = "Entrar na transmissão";
+        streaming = true;
+      } else if (status.consoleState === "Ready") {
+        stateClass = "ready";
+        text = status.runningApp ? `Pronto para jogar · ${status.runningApp}` : "Pronto para jogar";
+        btnText = "Conectar e Jogar";
+        spectatorPaused = false;
+      } else if (status.consoleState === "Standby") {
+        stateClass = "standby";
+        text = "Modo de repouso";
+        btnText = "Ligar PS5 e Jogar";
+        spectatorPaused = false;
+      } else {
+        stateClass = "offline";
+        text = "Console não encontrado na rede do host";
+        btnText = "Tentar ligar e conectar";
+        spectatorPaused = false;
+      }
+
+      if (status.adaptiveBitrate) {
+        cornerAdaptiveEl.style.display = "inline";
+        const throttled = (status.adaptivePressurePercent || 0) > 0;
+        cornerAdaptiveEl.className = throttled ? "corner-adaptive throttled" : "corner-adaptive";
+        cornerAdaptiveEl.textContent = throttled ? "· Adapt. ↓" : "· Adapt.";
+      } else {
+        cornerAdaptiveEl.style.display = "none";
+      }
+
+      if (status.streamState === "Idle" || status.streamState === 0) {
+        lastMediaConfig = null;
+      }
+
+      heroRingsEl.className = `hero-rings ${stateClass}`;
+      statusRowEl.className = `status-row ${stateClass}`;
+      statusDotEl.className = `dot ${stateClass}`;
+      statusTextEl.textContent = text;
+      playBtn.disabled = busy || (!streaming && !isController());
+      qualitySelectEl.disabled = busy;
+      customResEl.disabled = busy;
+      customFpsEl.disabled = busy;
+      customBitrateEl.disabled = busy;
+      customAdaptiveEl.disabled = busy;
+      cancelBtn.style.display = busy ? "block" : "none";
+      endSessionLobbyBtn.style.display = (streaming && isController()) ? "block" : "none";
+      if (!busy) {
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = "Cancelar";
+      }
+      if (!streaming) {
+        endSessionLobbyBtn.disabled = false;
+        endSessionLobbyBtn.textContent = "Encerrar sessão do PS5 (trocar qualidade)";
+      }
+      if (busy) {
+        playBtn.innerHTML = `<span class="spinner"></span><span>${btnText}</span>`;
+      } else {
+        playBtn.textContent = btnText;
+      }
+
+      if (isApproved) {
+        if (streaming && !spectatorPaused) {
+          stopBtn.disabled = false;
+          enterStreamView();
+        } else {
+          leaveStreamView(!busy);
+        }
+      }
+    }
+
+    function enterStreamView() {
+      const alreadyActive = streamView.classList.contains("active");
+      launcher.style.display = "none";
+      waitingGate.style.display = "none";
+      streamView.classList.add("active");
+      if (!alreadyActive) {
+        wakeHud();
+        renderer.resize();
+        renderer.setRenderActive(true);
+      }
+      if ((!videoDecoder || videoDecoder.state !== "configured") && lastMediaConfig) {
+        configureMedia(lastMediaConfig);
+        requestKeyframe();
+      }
+    }
+
+    function leaveStreamView(shouldCloseDecoders = true) {
+      gpuBoostPopover.classList.remove("open");
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+      streamView.classList.remove("active");
+      renderer.setRenderActive(false);
+      if (isApproved) launcher.style.display = "block";
+      if (shouldCloseDecoders) closeDecoders();
+    }
+
+    function wakeHud() {
+      hudEl.classList.remove("hidden");
+      clearTimeout(hudTimer);
+      if (!gpuBoostPopover.classList.contains("open")) {
+        hudTimer = setTimeout(() => hudEl.classList.add("hidden"), 3000);
+      }
+    }
+
+    function syncAudioGain() {
+      if (audioGain) {
+        audioGain.gain.value = audioMuted ? 0 : audioVolume;
+      }
+      audioBtn.textContent = (audioMuted || audioVolume <= 0.01) ? "Sem som" : `${Math.round(audioVolume * 100)}%`;
+    }
+
+    async function ensureAudioStarted() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+        const blob = new Blob([WORKLET_CODE], { type: "application/javascript" });
+        const url = URL.createObjectURL(blob);
+        try {
+          await audioCtx.audioWorklet.addModule(url);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+        audioNode = new AudioWorkletNode(audioCtx, "cord-ring-audio", {
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
+          outputChannelCount: [2]
+        });
+        audioGain = audioCtx.createGain();
+        audioNode.connect(audioGain);
+        audioGain.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      syncAudioGain();
+    }
+
+    volSlider.addEventListener("input", async () => {
+      audioVolume = Math.max(0, Math.min(1, parseInt(volSlider.value, 10) / 100));
+      audioMuted = audioVolume <= 0.01;
+      localStorage.setItem("cord_volume", String(audioVolume));
+      try { await ensureAudioStarted(); } catch {}
+      syncAudioGain();
+    });
+
+    function closeDecoders() {
+      configureGen++;
+      if (videoDecoder) {
+        try { videoDecoder.close(); } catch {}
+        videoDecoder = null;
+      }
+      if (audioDecoder) {
+        try { audioDecoder.close(); } catch {}
+        audioDecoder = null;
+      }
+      currentCodec = null;
+      currentConfigKey = null;
+      awaitingKeyframe = true;
+      stallSeconds = 0;
+      renderer.clearFrame();
+    }
+
+    async function configureMedia(cfg) {
+      if (!("VideoDecoder" in window)) {
+        showStreamBanner("Este navegador não suporta WebCodecs. Use Chrome, Edge ou Opera recente.");
+        return;
+      }
+      lastMediaConfig = cfg;
+      const myGen = ++configureGen;
+      const configKey = `${cfg.codec || ""}|${cfg.width || 0}x${cfg.height || 0}|${cfg.epoch || 0}`;
+      if (cfg.width && cfg.height) {
+        renderer.setSourceSize(cfg.width, cfg.height);
+        cornerResEl.textContent = `${cfg.height}p`;
+      }
+      if (cfg.codec && (!videoDecoder || videoDecoder.state !== "configured" || configKey !== currentConfigKey)) {
+        if (videoDecoder) {
+          try { videoDecoder.close(); } catch {}
+          videoDecoder = null;
+        }
+        awaitingKeyframe = true;
+        stallSeconds = 0;
+        currentCodec = cfg.codec;
+        currentConfigKey = configKey;
+        const config = { codec: cfg.codec, optimizeForLatency: true, hardwareAcceleration: "prefer-hardware" };
+        let support = await VideoDecoder.isConfigSupported(config);
+        if (myGen !== configureGen) return;
+        if (!support.supported) {
+          support = await VideoDecoder.isConfigSupported({ codec: cfg.codec, optimizeForLatency: true });
+          if (myGen !== configureGen) return;
+        }
+        if (!support.supported) {
+          showStreamBanner(`Codec ${cfg.codec} não suportado neste navegador. Se o host estiver em HEVC, peça para mudar para H.264.`);
+          return;
+        }
+        showStreamBanner("");
+        videoDecoder = new VideoDecoder({
+          output: (frame) => {
+            const dw = frame.displayWidth;
+            const dh = frame.displayHeight;
+            renderer.setSourceSize(dw, dh);
+            if (dh && cornerResEl.textContent !== `${dh}p`) {
+              cornerResEl.textContent = `${dh}p`;
+            }
+            decodedFpsCounter++;
+            stallSeconds = 0;
+            if (renderer.submitFrame(frame)) fpsCounter++;
+          },
+          error: () => {
+            awaitingKeyframe = true;
+            requestKeyframe();
+          }
+        });
+        videoDecoder.configure(support.config);
+        requestKeyframe();
+      }
+
+      if ("AudioDecoder" in window && !audioDecoder) {
+        const audioConfig = { codec: "opus", sampleRate: cfg.sampleRate || 48000, numberOfChannels: cfg.channels || 2 };
+        const audioSup = await AudioDecoder.isConfigSupported(audioConfig);
+        if (myGen !== configureGen) return;
+        if (audioSup.supported && !audioDecoder) {
+          audioDecoder = new AudioDecoder({
+            output: (data) => {
+              if (audioNode && !audioMuted) {
+                const n = data.numberOfFrames;
+                const ch = data.numberOfChannels;
+                const l = new Float32Array(n);
+                const r = new Float32Array(n);
+                if (data.format === "f32-planar") {
+                  data.copyTo(l, { planeIndex: 0, format: "f32-planar" });
+                  if (ch > 1) data.copyTo(r, { planeIndex: 1, format: "f32-planar" });
+                  else r.set(l);
+                } else {
+                  const interleaved = new Float32Array(n * ch);
+                  data.copyTo(interleaved, { planeIndex: 0, format: "f32" });
+                  for (let i = 0; i < n; i++) {
+                    l[i] = interleaved[i * ch];
+                    r[i] = ch > 1 ? interleaved[i * ch + 1] : l[i];
+                  }
+                }
+                audioNode.port.postMessage({ l, r }, [l.buffer, r.buffer]);
+              }
+              data.close();
+            },
+            error: () => {}
+          });
+          audioDecoder.configure(audioSup.config);
+        }
+      }
+    }
+
+    function requestKeyframe() {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "requestKeyframe" }));
+    }
+
+    function handleBinaryPacket(buf) {
+      const bytes = new Uint8Array(buf);
+      if (bytes.length < 3) return;
+      const type = bytes[0];
+      if (type === 0x01 && bytes.length > 10) {
+        videoBytesCounter += bytes.length - 10;
+        const isKey = (bytes[1] & 0x01) !== 0;
+        if (!videoDecoder || videoDecoder.state !== "configured" || !isApproved || spectatorPaused) return;
+        if (videoDecoder.decodeQueueSize > (frameGen.lowLatency ? 3 : 5) && !isKey) {
+          awaitingKeyframe = true;
+          requestKeyframe();
+          return;
+        }
+        if (awaitingKeyframe) {
+          if (!isKey) return;
+          awaitingKeyframe = false;
+        }
+        const view = new DataView(buf, 2, 8);
+        const tsUs = Number(view.getBigInt64(0, true));
+        try {
+          videoDecoder.decode(new EncodedVideoChunk({ type: isKey ? "key" : "delta", timestamp: tsUs, data: bytes.subarray(10) }));
+        } catch {
+          awaitingKeyframe = true;
+          requestKeyframe();
+        }
+      } else if (type === 0x02 && bytes.length > 10) {
+        if (!audioDecoder || audioDecoder.state !== "configured" || audioMuted || !isApproved || spectatorPaused) return;
+        const view = new DataView(buf, 2, 8);
+        const tsUs = Number(view.getBigInt64(0, true));
+        try {
+          audioDecoder.decode(new EncodedAudioChunk({ type: "key", timestamp: tsUs, data: bytes.subarray(10) }));
+        } catch {}
+      } else if (type === 0x03 && isController()) {
+        const left = bytes[1] / 255;
+        const right = bytes[2] / 255;
+        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        for (const pad of pads) {
+          if (pad && pad.vibrationActuator && pad.vibrationActuator.playEffect) {
+            pad.vibrationActuator.playEffect("dual-rumble", { startDelay: 0, duration: 120, weakMagnitude: right, strongMagnitude: left }).catch(() => {});
+          }
+        }
+      }
+    }
+
+    function connectWebSocket() {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${proto}//${window.location.host}/ws?t=${encodeURIComponent(token)}`);
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        sendJoin();
+        ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
+      };
+
+      ws.onmessage = (ev) => {
+        if (typeof ev.data === "string") {
+          try {
+            const msg = JSON.parse(ev.data);
+            if (msg.type === "welcome") {
+              myClientId = msg.clientId || null;
+              psUnlocked = false;
+              showApprovedLauncher();
+            } else if (msg.type === "pending") {
+              myClientId = msg.clientId || null;
+              showWaitingGate();
+            } else if (msg.type === "joinError") {
+              joinIntent = false;
+              showNameGate(msg.message || "Não foi possível entrar.");
+            } else if (msg.type === "kicked") {
+              kickedReason = msg.reason || "Você foi desconectado pelo dono.";
+              joinIntent = false;
+              isApproved = false;
+              isPending = false;
+              closeDecoders();
+              showNameGate(kickedReason);
+            } else if (msg.type === "psUnlocked") {
+              psUnlocked = Boolean(msg.unlocked);
+              psUnlockModal.classList.remove("open");
+              showStreamBanner("Botão PS desbloqueado!", 3000);
+              if (latestStatus) renderMembers(latestStatus);
+            } else if (msg.type === "psUnlockResult" && !msg.ok) {
+              psUnlockErr.style.display = "block";
+              psUnlockErr.textContent = msg.message || "Senha incorreta.";
+            } else if (msg.type === "status" && msg.status) {
+              updateStatusUi(msg.status);
+            } else if (msg.type === "config") {
+              configureMedia(msg);
+            } else if (msg.type === "pong" && typeof msg.ts === "number") {
+              const rtt = Math.max(1, Date.now() - msg.ts);
+              if (!document.hidden && rtt <= 5000) {
+                lastRttMs = rtt;
+                cornerMsEl.textContent = String(rtt);
+                cornerMsDotEl.className = rtt <= 45 ? "ms-dot" : rtt <= 90 ? "ms-dot mid" : "ms-dot high";
+                rttSamples.push(rtt);
+                if (rttSamples.length > 10) rttSamples.shift();
+                updateNetworkRecommendation();
+              }
+            }
+          } catch {}
+        } else if (ev.data instanceof ArrayBuffer) {
+          handleBinaryPacket(ev.data);
+        }
+      };
+
+      ws.onclose = () => {
+        closeDecoders();
+        if (kickedReason) return;
+        statusRowEl.className = "status-row offline";
+        statusDotEl.className = "dot offline";
+        statusTextEl.textContent = "Conexão perdida com o host. Tentando reconectar...";
+        setTimeout(connectWebSocket, 2000);
+      };
+    }
+
+    const pressedKeys = new Set();
+    window.addEventListener("keydown", (e) => {
+      if (streamView.classList.contains("active") && document.activeElement?.tagName !== "INPUT") {
+        if (e.code === "F7") {
+          e.preventDefault();
+          cycleFrameGenMode(true);
+          return;
+        }
+        if (["Space", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Backspace"].includes(e.code)) {
+          e.preventDefault();
+        }
+      }
+      if (document.activeElement?.tagName === "INPUT") return;
+      if (!pressedKeys.has(e.code)) {
+        pressedKeys.add(e.code);
+        if (frameGen.lowLatency) inputTick();
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      if (pressedKeys.delete(e.code) && frameGen.lowLatency) inputTick();
+    });
+    window.addEventListener("blur", () => { pressedKeys.clear(); mouseDownLeft = false; mouseDownRight = false; sendIdleInput(); });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        pressedKeys.clear();
+        sendIdleInput();
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "visibility", hidden: document.hidden }));
+        if (!document.hidden && streamView.classList.contains("active")) {
+          requestKeyframe();
+        }
+      }
+    });
+
+    canvas.addEventListener("click", () => {
+      gpuBoostPopover.classList.remove("open");
+      if (mouseLookEnabled && isController() && document.pointerLockElement !== canvas) {
+        canvas.requestPointerLock?.();
+      }
+    });
+    document.addEventListener("pointerlockchange", () => {
+      const locked = document.pointerLockElement === canvas;
+      mouseStickBtn.classList.toggle("active", locked);
+      mouseStickBtn.textContent = locked ? "Mouse: ON (Esc)" : (mouseLookEnabled ? "Mouse: clique na tela" : "Mouse: OFF");
+      if (!locked) { mouseVelX = 0; mouseVelY = 0; mouseDownLeft = false; mouseDownRight = false; }
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (document.pointerLockElement === canvas && isController()) {
+        mouseVelX = Math.max(-1, Math.min(1, mouseVelX + e.movementX * 0.045));
+        mouseVelY = Math.max(-1, Math.min(1, mouseVelY + e.movementY * 0.045));
+        if (frameGen.lowLatency) inputTick();
+      } else {
+        wakeHud();
+      }
+    });
+    window.addEventListener("mousedown", (e) => {
+      if (document.pointerLockElement === canvas && isController()) {
+        if (e.button === 0) mouseDownRight = true;
+        if (e.button === 2) mouseDownLeft = true;
+        if (frameGen.lowLatency) inputTick();
+      }
+    });
+    window.addEventListener("mouseup", (e) => {
+      if (e.button === 0) mouseDownRight = false;
+      if (e.button === 2) mouseDownLeft = false;
+      if (frameGen.lowLatency) inputTick();
+    });
+    canvas.addEventListener("contextmenu", (e) => { if (document.pointerLockElement === canvas) e.preventDefault(); });
+
+    mouseStickBtn.addEventListener("click", () => {
+      mouseLookEnabled = !mouseLookEnabled;
+      if (mouseLookEnabled && isController()) {
+        canvas.requestPointerLock?.();
+      } else if (!mouseLookEnabled && document.pointerLockElement === canvas) {
+        document.exitPointerLock?.();
+      }
+      mouseStickBtn.textContent = mouseLookEnabled ? "Mouse: clique na tela" : "Mouse: OFF";
+    });
+
+    function updateGamepadLabel() {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const active = Array.from(pads).find(Boolean);
+      gamepadStatusEl.textContent = active
+        ? `Controle detectado: ${active.id}`
+        : "Nenhum controle detectado ainda. Conecte um controle USB/Bluetooth e aperte qualquer botão.";
+    }
+    window.addEventListener("gamepadconnected", updateGamepadLabel);
+    window.addEventListener("gamepaddisconnected", updateGamepadLabel);
+
+    function axisFromFloat(v) {
+      if (Math.abs(v) < 0.06) return 0;
+      return Math.max(-32768, Math.min(32767, Math.round(v * 32767)));
+    }
+    function axisFromKeys(neg, pos) {
+      if (neg === pos) return 0;
+      return neg ? -32768 : 32767;
+    }
+
+    const inputBuf = new Uint8Array(15);
+    const inputView = new DataView(inputBuf.buffer);
+
+    function encodeControllerState() {
+      const buf = inputBuf;
+      const view = inputView;
+      buf[0] = 0x10;
+
+      let buttons = 0;
+      if (pressedKeys.has("Enter")) buttons |= 1 << 0;
+      if (pressedKeys.has("Backspace")) buttons |= 1 << 1;
+      if (pressedKeys.has("Space")) buttons |= 1 << 2;
+      if (pressedKeys.has("Tab")) buttons |= 1 << 3;
+      if (pressedKeys.has("ArrowLeft")) buttons |= 1 << 4;
+      if (pressedKeys.has("ArrowRight")) buttons |= 1 << 5;
+      if (pressedKeys.has("ArrowUp")) buttons |= 1 << 6;
+      if (pressedKeys.has("ArrowDown")) buttons |= 1 << 7;
+      if (pressedKeys.has("KeyQ")) buttons |= 1 << 8;
+      if (pressedKeys.has("KeyE")) buttons |= 1 << 9;
+      if (pressedKeys.has("KeyO")) buttons |= 1 << 12;
+      if (pressedKeys.has("KeyT")) buttons |= 1 << 14;
+      if (pressedKeys.has("KeyP") || performance.now() < psPulseUntil) buttons |= 1 << 15;
+
+      let l2 = (pressedKeys.has("Digit1") || mouseDownLeft) ? 255 : 0;
+      let r2 = (pressedKeys.has("Digit3") || mouseDownRight) ? 255 : 0;
+      let lx = axisFromKeys(pressedKeys.has("KeyA"), pressedKeys.has("KeyD"));
+      let ly = axisFromKeys(pressedKeys.has("KeyW"), pressedKeys.has("KeyS"));
+      let rx = axisFromKeys(pressedKeys.has("KeyJ"), pressedKeys.has("KeyL"));
+      let ry = axisFromKeys(pressedKeys.has("KeyI"), pressedKeys.has("KeyK"));
+
+      if (rx === 0 && Math.abs(mouseVelX) > 0.02) rx = axisFromFloat(mouseVelX);
+      if (ry === 0 && Math.abs(mouseVelY) > 0.02) ry = axisFromFloat(mouseVelY);
+      mouseVelX *= 0.45;
+      mouseVelY *= 0.45;
+
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pad = Array.from(pads).find(Boolean);
+      if (pad) {
+        const b = pad.buttons;
+        if (b[0]?.pressed) buttons |= 1 << 0;
+        if (b[1]?.pressed) buttons |= 1 << 1;
+        if (b[2]?.pressed) buttons |= 1 << 2;
+        if (b[3]?.pressed) buttons |= 1 << 3;
+        if (b[14]?.pressed) buttons |= 1 << 4;
+        if (b[15]?.pressed) buttons |= 1 << 5;
+        if (b[12]?.pressed) buttons |= 1 << 6;
+        if (b[13]?.pressed) buttons |= 1 << 7;
+        if (b[4]?.pressed) buttons |= 1 << 8;
+        if (b[5]?.pressed) buttons |= 1 << 9;
+        if (b[10]?.pressed) buttons |= 1 << 10;
+        if (b[11]?.pressed) buttons |= 1 << 11;
+        if (b[9]?.pressed) buttons |= 1 << 12;
+        if (b[8]?.pressed) buttons |= 1 << 13;
+        if (b[17]?.pressed) buttons |= 1 << 14;
+        if (b[16]?.pressed) buttons |= 1 << 15;
+
+        l2 = Math.max(l2, Math.round((b[6]?.value || 0) * 255));
+        r2 = Math.max(r2, Math.round((b[7]?.value || 0) * 255));
+        if (lx === 0) lx = axisFromFloat(pad.axes[0] || 0);
+        if (ly === 0) ly = axisFromFloat(pad.axes[1] || 0);
+        if (rx === 0) rx = axisFromFloat(pad.axes[2] || 0);
+        if (ry === 0) ry = axisFromFloat(pad.axes[3] || 0);
+      }
+
+      view.setUint32(1, buttons, true);
+      buf[5] = l2;
+      buf[6] = r2;
+      view.setInt16(7, lx, true);
+      view.setInt16(9, ly, true);
+      view.setInt16(11, rx, true);
+      view.setInt16(13, ry, true);
+      return buf;
+    }
+
+    function sendIdleInput() {
+      if (ws && ws.readyState === WebSocket.OPEN && isController()) {
+        const idle = new Uint8Array(15);
+        idle[0] = 0x10;
+        ws.send(idle);
+        lastSentInput = idle;
+      }
+    }
+
+    function inputTick() {
+      if (ws && ws.readyState === WebSocket.OPEN && streamView.classList.contains("active") && isController()) {
+        const now = performance.now();
+        const encoded = encodeControllerState();
+        const view = inputView;
+        const hasActiveInput = view.getUint32(1, true) !== 0
+          || encoded[5] > 0 || encoded[6] > 0
+          || view.getInt16(7, true) !== 0 || view.getInt16(9, true) !== 0
+          || view.getInt16(11, true) !== 0 || view.getInt16(13, true) !== 0;
+
+        if (hasActiveInput) {
+          const idleLong = lastNonIdleInputMs > 0 && (now - lastNonIdleInputMs) >= 4000;
+          const starved = lastReportedMbps < 2.5 || lastReportedFps < 25;
+          if ((idleLong || starved) && (now - lastResumeKeyframeMs) >= 2000) {
+            lastResumeKeyframeMs = now;
+            requestKeyframe();
+          }
+          lastNonIdleInputMs = now;
+        }
+
+        let changed = false;
+        for (let i = 0; i < 15; i++) {
+          if (encoded[i] !== lastSentInput[i]) { changed = true; break; }
+        }
+        if (changed || now - lastInputSendMs >= 100) {
+          ws.send(encoded);
+          lastSentInput.set(encoded);
+          lastInputSendMs = now;
+        }
+      }
+    }
+
+    playBtn.addEventListener("click", async () => {
+      if (playBtn.disabled) return;
+      showLobbyError("");
+      try { await ensureAudioStarted(); } catch {}
+
+      if (latestStatus && (latestStatus.streamState === "Streaming" || latestStatus.streamState === 3)) {
+        spectatorPaused = false;
+        requestKeyframe();
+        enterStreamView();
+        return;
+      }
+
+      playBtn.disabled = true;
+      qualitySelectEl.disabled = true;
+      customResEl.disabled = true;
+      customFpsEl.disabled = true;
+      customBitrateEl.disabled = true;
+      customAdaptiveEl.disabled = true;
+      playBtn.innerHTML = `<span class="spinner"></span><span>Iniciando...</span>`;
+      heroRingsEl.className = "hero-rings busy";
+      statusRowEl.className = "status-row busy";
+      statusDotEl.className = "dot busy";
+      statusTextEl.textContent = "Enviando comando para o host...";
+      cancelBtn.style.display = "block";
+      cancelBtn.disabled = false;
+
+      const quality = parseSelectedQuality();
+      try {
+        const res = await fetch(apiUrl("/api/wake"), {
+          method: "POST",
+          headers: apiHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify(quality)
+        });
+        if (!res.ok) {
+          playBtn.disabled = false;
+          qualitySelectEl.disabled = false;
+          customResEl.disabled = false;
+          customFpsEl.disabled = false;
+          customBitrateEl.disabled = false;
+          customAdaptiveEl.disabled = false;
+          playBtn.textContent = "Tentar novamente";
+          cancelBtn.style.display = "none";
+          showLobbyError("Não foi possível iniciar a sessão no host.");
+          return;
+        }
+        updateStatusUi(await res.json());
+      } catch {
+        playBtn.disabled = false;
+        qualitySelectEl.disabled = false;
+        customResEl.disabled = false;
+        customFpsEl.disabled = false;
+        customBitrateEl.disabled = false;
+        customAdaptiveEl.disabled = false;
+        playBtn.textContent = "Tentar novamente";
+        cancelBtn.style.display = "none";
+        showLobbyError("Falha de conexão com o host.");
+      }
+    });
+
+    cancelBtn.addEventListener("click", async () => {
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = "Cancelando...";
+      try {
+        const res = await fetch(apiUrl("/api/disconnect"), { method: "POST", headers: apiHeaders() });
+        if (res.ok) updateStatusUi(await res.json());
+      } catch {}
+    });
+
+    async function sendRestMode() {
+      if (!confirm("Colocar o PS5 em Modo de Repouso agora?")) return;
+      try {
+        const res = await fetch(apiUrl("/api/rest"), { method: "POST", headers: apiHeaders() });
+        const data = await res.json();
+        showStreamBanner(data.message || "PS5 entrando em modo repouso.", 3500);
+      } catch {
+        showLobbyError("Não foi possível colocar o PS5 em modo repouso.");
+      }
+    }
+    restLobbyBtn.addEventListener("click", sendRestMode);
+    restHudBtn.addEventListener("click", sendRestMode);
+
+    clipBtn.addEventListener("click", async () => {
+      clipBtn.disabled = true;
+      try {
+        const res = await fetch(apiUrl("/api/clip"), { method: "POST", headers: apiHeaders() });
+        const data = await res.json();
+        showStreamBanner(data.message || "Clipe salvo!", 4000);
+      } catch {
+        showStreamBanner("Falha ao salvar clipe.", 3000);
+      } finally {
+        clipBtn.disabled = false;
+      }
+    });
+
+    unlockPsBtn.addEventListener("click", () => {
+      psUnlockErr.style.display = "none";
+      psUnlockInput.value = "";
+      psUnlockModal.classList.add("open");
+      setTimeout(() => psUnlockInput.focus(), 50);
+    });
+    psUnlockCancel.addEventListener("click", () => psUnlockModal.classList.remove("open"));
+    psUnlockForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "unlockPs", password: psUnlockInput.value }));
+      }
+    });
+
+    audioBtn.addEventListener("click", async () => {
+      audioMuted = !audioMuted;
+      try { await ensureAudioStarted(); } catch {}
+      syncAudioGain();
+    });
+
+    psBtn.addEventListener("click", () => {
+      if (isController()) psPulseUntil = performance.now() + 180;
+    });
+
+    fsBtn.addEventListener("click", () => {
+      if (!document.fullscreenElement) streamView.requestFullscreen().catch(() => {});
+      else document.exitFullscreen().catch(() => {});
+    });
+
+    leaveBtn.addEventListener("click", () => {
+      sendIdleInput();
+      spectatorPaused = true;
+      leaveStreamView(true);
+    });
+
+    async function requestEndPs5Session(btn, defaultLabel) {
+      if (!isController()) return;
+      if (!confirm("Encerrar a sessão do Remote Play no PS5? Isso desconecta o controle virtual do jogo.")) return;
+      btn.disabled = true;
+      btn.textContent = "Encerrando...";
+      sendIdleInput();
+      try {
+        const res = await fetch(apiUrl("/api/disconnect"), { method: "POST", headers: apiHeaders() });
+        if (res.ok) updateStatusUi(await res.json());
+      } catch {
+        btn.disabled = false;
+        btn.textContent = defaultLabel;
+      }
+    }
+
+    stopBtn.addEventListener("click", () => requestEndPs5Session(stopBtn, "Encerrar PS5"));
+    endSessionLobbyBtn.addEventListener("click", () => requestEndPs5Session(endSessionLobbyBtn, "Encerrar sessão do PS5 (trocar qualidade)"));
+
+    streamView.addEventListener("touchstart", wakeHud, { passive: true });
+    streamView.addEventListener("pointerdown", () => {
+      if (!audioCtx) ensureAudioStarted().catch(() => {});
+    });
+
+    window.addEventListener("resize", () => renderer.resize());
+    document.addEventListener("fullscreenchange", () => renderer.resize());
+
+    setInterval(updateCooldownUi, 250);
+    setInterval(() => {
+      if (!document.hidden && ws && ws.readyState === WebSocket.OPEN && streamView.classList.contains("active") && isController() && latestStatus?.adaptiveBitrate) {
+        ws.send(JSON.stringify({
+          type: "netStats",
+          rttMs: lastRttMs,
+          decodeQueue: videoDecoder ? videoDecoder.decodeQueueSize : 0
+        }));
+      }
+    }, 500);
+    setInterval(() => {
+      const streamingActive = streamView.classList.contains("active") && isApproved && !spectatorPaused;
+      if (streamingActive && videoBytesCounter > 0 && decodedFpsCounter === 0) {
+        stallSeconds++;
+        if (stallSeconds >= 2) {
+          stallSeconds = 0;
+          awaitingKeyframe = true;
+          if (lastMediaConfig && (!videoDecoder || videoDecoder.state !== "configured")) {
+            configureMedia(lastMediaConfig);
+          }
+          requestKeyframe();
+        }
+      } else {
+        stallSeconds = 0;
+      }
+
+      const mbps = (videoBytesCounter * 8) / 1_000_000;
+      lastReportedMbps = mbps;
+      lastReportedFps = decodedFpsCounter;
+      renderer.setDecodedFps(decodedFpsCounter);
+      cornerFpsEl.textContent = String(fpsCounter);
+      cornerMbpsEl.textContent = mbps.toFixed(1);
+      fpsCounter = 0;
+      decodedFpsCounter = 0;
+      videoBytesCounter = 0;
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "ping", ts: Date.now() }));
+      updateGamepadLabel();
+    }, 1000);
+
+    connectWebSocket();
+    restartInputLoop();
+  })();
+  </script>
+</body>
+</html>
