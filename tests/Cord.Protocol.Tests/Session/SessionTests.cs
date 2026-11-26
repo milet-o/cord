@@ -114,6 +114,14 @@ public class SessionTests
             await stream.ReadExactlyAsync(enable, timeout.Token);
             Assert.Equal((ushort)CtrlMessageType.EnableDualSenseFeatures, BinaryPrimitives.ReadUInt16BigEndian(enable.AsSpan(4)));
             Assert.Equal(new byte[] { 0x00, 0x40, 0x00 }, consoleCipher.Decrypt(5, enable.AsSpan(8)));
+
+            var dualSenseConnect = new byte[8 + 16];
+            await stream.ReadExactlyAsync(dualSenseConnect, timeout.Token);
+            Assert.Equal((ushort)CtrlMessageType.DualSenseConnect, BinaryPrimitives.ReadUInt16BigEndian(dualSenseConnect.AsSpan(4)));
+
+            var displayDevices = new byte[8 + 4];
+            await stream.ReadExactlyAsync(displayDevices, timeout.Token);
+            Assert.Equal((ushort)CtrlMessageType.DisplayDevices, BinaryPrimitives.ReadUInt16BigEndian(displayDevices.AsSpan(4)));
         });
 
         await using var ctrl = await CtrlChannel.ConnectAsync(endPoint, RegistKey, clientCipher, secrets, VideoCodec.Hevc, timeout.Token);
