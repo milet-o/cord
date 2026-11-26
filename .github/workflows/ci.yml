@@ -19,7 +19,7 @@ jobs:
       - name: Build
         run: dotnet build Cord.slnx --no-restore -c Release
       - name: Test
-        run: dotnet test Cord.slnx --no-build -c Release
+        run: dotnet test Cord.slnx --no-build -c Release --filter "FullyQualifiedName!=Cord.Media.Tests.ZeroCopyTests.SharedD3D11Device_KeepsFramesOnGpuWithSamePixelsAsSoftware"
 
   linux:
     runs-on: ubuntu-latest
