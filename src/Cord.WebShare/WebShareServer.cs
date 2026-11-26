@@ -1641,11 +1641,13 @@ public sealed class WebShareServer : IAsyncDisposable
 
         public async Task RunAsync(CancellationToken serverCancellation)
         {
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation, _stop.Token);
-            var sendTask = SendLoopAsync(linked.Token);
-            var receiveTask = ReceiveLoopAsync(linked.Token);
+            using var sendWakeCts = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation, _stop.Token);
+            using var receiveCts = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation, _stop.Token);
+            var sendTask = SendLoopAsync(sendWakeCts.Token, serverCancellation);
+            var receiveTask = ReceiveLoopAsync(receiveCts.Token);
             await Task.WhenAny(sendTask, receiveTask);
-            await linked.CancelAsync();
+            await sendWakeCts.CancelAsync();
+            await receiveCts.CancelAsync();
             try
             {
                 await Task.WhenAll(sendTask, receiveTask);
@@ -1664,9 +1666,14 @@ public sealed class WebShareServer : IAsyncDisposable
             _outgoing.Writer.TryComplete();
             try
             {
-                if (_ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
+                if (_ws.State == WebSocketState.CloseReceived)
                 {
-                    using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                }
+                else if (_ws.State == WebSocketState.Open)
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                     await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
                 }
             }
@@ -1679,13 +1686,13 @@ public sealed class WebShareServer : IAsyncDisposable
             _stop.Dispose();
         }
 
-        private async Task SendLoopAsync(CancellationToken ct)
+        private async Task SendLoopAsync(CancellationToken wakeToken, CancellationToken sendAbortToken)
         {
-            await foreach (var data in _outgoing.Reader.ReadAllAsync(ct))
+            await foreach (var data in _outgoing.Reader.ReadAllAsync(wakeToken))
             {
                 if (_ws.State != WebSocketState.Open)
                     return;
-                await _ws.SendAsync(data, WebSocketMessageType.Text, endOfMessage: true, ct);
+                await _ws.SendAsync(data, WebSocketMessageType.Text, endOfMessage: true, sendAbortToken);
             }
         }
 
@@ -1789,11 +1796,13 @@ public sealed class WebShareServer : IAsyncDisposable
 
         public async Task RunAsync(CancellationToken serverCancellation)
         {
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation, _stop.Token);
-            var sendTask = SendLoopAsync(linked.Token);
-            var receiveTask = ReceiveLoopAsync(linked.Token);
+            using var sendWakeCts = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation, _stop.Token);
+            using var receiveCts = CancellationTokenSource.CreateLinkedTokenSource(serverCancellation, _stop.Token);
+            var sendTask = SendLoopAsync(sendWakeCts.Token, serverCancellation);
+            var receiveTask = ReceiveLoopAsync(receiveCts.Token);
             await Task.WhenAny(sendTask, receiveTask);
-            await linked.CancelAsync();
+            await sendWakeCts.CancelAsync();
+            await receiveCts.CancelAsync();
             try
             {
                 await Task.WhenAll(sendTask, receiveTask);
@@ -1813,9 +1822,14 @@ public sealed class WebShareServer : IAsyncDisposable
             _video.Writer.TryComplete();
             try
             {
-                if (_ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
+                if (_ws.State == WebSocketState.CloseReceived)
                 {
-                    using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
+                }
+                else if (_ws.State == WebSocketState.Open)
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                     await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", timeout.Token);
                 }
             }
@@ -1840,11 +1854,11 @@ public sealed class WebShareServer : IAsyncDisposable
             }
         }
 
-        private async Task SendLoopAsync(CancellationToken cancellationToken)
+        private async Task SendLoopAsync(CancellationToken wakeToken, CancellationToken sendAbortToken)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (!wakeToken.IsCancellationRequested)
             {
-                await _signal.WaitAsync(cancellationToken);
+                await _signal.WaitAsync(wakeToken);
 
                 while (true)
                 {
@@ -1852,14 +1866,14 @@ public sealed class WebShareServer : IAsyncDisposable
                     {
                         if (_ws.State != WebSocketState.Open)
                             return;
-                        await _ws.SendAsync(msg.Data, msg.Type, endOfMessage: true, cancellationToken);
+                        await _ws.SendAsync(msg.Data, msg.Type, endOfMessage: true, sendAbortToken);
                     }
 
                     if (_video.Reader.TryRead(out var videoPacket))
                     {
                         if (_ws.State != WebSocketState.Open)
                             return;
-                        await _ws.SendAsync(videoPacket, WebSocketMessageType.Binary, endOfMessage: true, cancellationToken);
+                        await _ws.SendAsync(videoPacket, WebSocketMessageType.Binary, endOfMessage: true, sendAbortToken);
                         continue;
                     }
 
