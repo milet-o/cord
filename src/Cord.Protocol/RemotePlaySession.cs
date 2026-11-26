@@ -74,7 +74,14 @@ public sealed class RemotePlaySession : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await Stream.DisposeAsync();
-        await Task.WhenAny(Ctrl.Closed, Task.Delay(350));
+        try
+        {
+            await Ctrl.Closed.WaitAsync(TimeSpan.FromMilliseconds(350));
+        }
+        catch (Exception e) when (e is TimeoutException or RemotePlayException or IOException or OperationCanceledException)
+        {
+        }
+
         await Ctrl.DisposeAsync();
         _cipher.Dispose();
     }

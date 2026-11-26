@@ -105,17 +105,20 @@ public sealed class CtrlChannel : IAsyncDisposable
         _passcodeProvider = passcodeProvider;
         _readLoop ??= Task.Run(() => ReadLoopAsync(_stop.Token), CancellationToken.None);
 
-        var completed = await Task.WhenAny(_sessionId.Task, _closed.Task, Task.Delay(timeout, cancellationToken));
-        cancellationToken.ThrowIfCancellationRequested();
-        if (completed == _sessionId.Task)
-            return await _sessionId.Task;
-        if (completed == _closed.Task)
+        Task completed;
+        try
         {
-            await _closed.Task;
-            throw new RemotePlayException(RemotePlayError.Disconnected, "The console closed the ctrl channel.");
+            completed = await Task.WhenAny(_sessionId.Task, _closed.Task).WaitAsync(timeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            return FallbackSessionId();
         }
 
-        return FallbackSessionId();
+        if (completed == _sessionId.Task)
+            return await _sessionId.Task;
+        await _closed.Task;
+        throw new RemotePlayException(RemotePlayError.Disconnected, "The console closed the ctrl channel.");
     }
 
     public Task SendAsync(CtrlMessageType type, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default) =>

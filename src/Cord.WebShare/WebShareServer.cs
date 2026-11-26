@@ -1031,7 +1031,10 @@ public sealed class WebShareServer : IAsyncDisposable
         {
             try
             {
-                await Task.WhenAny(geoTask, Task.Delay(900, _stop.Token));
+                await geoTask.WaitAsync(TimeSpan.FromMilliseconds(900), _stop.Token);
+            }
+            catch (TimeoutException)
+            {
             }
             catch (OperationCanceledException)
             {

@@ -299,13 +299,19 @@ public sealed class StreamConnection : ITakionHandler, IVideoReceiverSink, IAudi
 
     private async Task<T> WaitAsync<T>(Task<T> task, string name, CancellationToken cancellationToken)
     {
-        var completed = await Task.WhenAny(task, _disconnected.Task, Task.Delay(ExpectTimeout, cancellationToken));
-        cancellationToken.ThrowIfCancellationRequested();
+        Task completed;
+        try
+        {
+            completed = await Task.WhenAny(task, _disconnected.Task).WaitAsync(ExpectTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            throw new RemotePlayException(RemotePlayError.InvalidResponse, $"Timed out waiting for {name}.");
+        }
+
         if (completed == task)
             return await task;
-        if (completed == _disconnected.Task)
-            throw new RemotePlayException(RemotePlayError.Disconnected, $"The console disconnected: {await _disconnected.Task}");
-        throw new RemotePlayException(RemotePlayError.InvalidResponse, $"Timed out waiting for {name}.");
+        throw new RemotePlayException(RemotePlayError.Disconnected, $"The console disconnected: {await _disconnected.Task}");
     }
 
     private async Task RunPeriodicAsync(CancellationToken cancellationToken)

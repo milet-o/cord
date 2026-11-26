@@ -124,11 +124,17 @@ public sealed class Senkusha : ITakionHandler
             var sent = Stopwatch.GetTimestamp();
             await takion.SendRawAsync(BuildPing(0, ping, _pingTag), cancellationToken);
 
-            var completed = await Task.WhenAny(_pong.Task, Task.Delay(PongTimeout, cancellationToken));
-            cancellationToken.ThrowIfCancellationRequested();
-            if (completed != _pong.Task)
+            long receivedAt;
+            try
+            {
+                receivedAt = await _pong.Task.WaitAsync(PongTimeout, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
                 continue;
-            total += Stopwatch.GetElapsedTime(sent, await _pong.Task);
+            }
+
+            total += Stopwatch.GetElapsedTime(sent, receivedAt);
             successful++;
         }
 
@@ -152,9 +158,13 @@ public sealed class Senkusha : ITakionHandler
 
     private static async Task WaitAsync(Task task, CancellationToken cancellationToken)
     {
-        var completed = await Task.WhenAny(task, Task.Delay(ExpectTimeout, cancellationToken));
-        cancellationToken.ThrowIfCancellationRequested();
-        if (completed != task)
+        try
+        {
+            await task.WaitAsync(ExpectTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
             throw new RemotePlayException(RemotePlayError.InvalidResponse, "Senkusha timed out.");
+        }
     }
 }
